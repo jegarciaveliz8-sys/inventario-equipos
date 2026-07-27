@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Asignaciones</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 900px; margin: 0 auto; }
+        table { width: 100%; background: white; border-radius: 10px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border-collapse: collapse; }
+        th { background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px; text-align: left; }
+        td { padding: 12px; border-bottom: 1px solid #eee; }
+        .btn { padding: 6px 14px; border-radius: 6px; text-decoration: none; font-size: 0.85rem; font-weight: 600; }
+        .btn-pdf { background: #dbeafe; color: #1e40af; }
+        .btn-firma { background: #d1fae5; color: #065f46; }
+        .btn-pendiente { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Asignaciones</h1>
+        <p><a href="{% url 'inventario:dashboard' %}">← Dashboard</a> | <a href="{% url 'inventario:asignacion_nueva' %}">+ Nueva Asignacion</a></p>
+        <table>
+            <tr><th>Equipo</th><th>Cliente</th><th>Fecha</th><th>Estado</th><th>Hoja</th></tr>
+            {% for a in asignaciones %}
+            <tr>
+                <td>{{ a.equipo }}</td>
+                <td>{{ a.cliente }}</td>
+                <td>{{ a.fecha_asignacion|date:"d/m/Y" }}</td>
+                <td>{% if a.activa %}Activa{% else %}Cerrada{% endif %}</td>
+                <td>
+                    {% if a.hoja %}
+                        {% if a.hoja.firmado %}
+                        <a class="btn btn-pdf" href="{% url 'inventario:descargar_pdf' a.hoja.id %}">Ver PDF</a>
+                        {% else %}
+                        <a class="btn btn-firma" href="{% url 'inventario:firmar_hoja' a.hoja.id %}">Firmar</a>
+                        {% endif %}
+                    {% else %}
+                    <span class="btn btn-pendiente">Sin hoja</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% empty %}
+            <tr><td colspan="5" style="text-align:center;">No hay asignaciones</td></tr>
+            {% endfor %}
+        </table>
+    </div>
+</body>
+</html>

@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Nueva Asignacion</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 600px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        label { display: block; margin: 15px 0 5px; font-weight: 600; color: #333; }
+        select, textarea { width: 100%; padding: 10px; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1rem; }
+        .checkboxes { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 5px; }
+        .checkboxes label { display: flex; align-items: center; gap: 6px; font-weight: normal; }
+        .checkboxes input { width: auto; }
+        button { margin-top: 20px; padding: 14px; width: 100%; background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; font-size: 1rem; font-weight: 600; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Nueva Asignacion</h1>
+        <p><a href="{% url 'inventario:asignacion_list' %}">← Volver</a></p>
+        <form method="post">
+            {% csrf_token %}
+            <label>Equipo:</label>
+            <select name="equipo" required>
+                <option value="">Selecciona...</option>
+                {% for e in equipos %}
+                <option value="{{ e.id }}">{{ e.nombre }} ({{ e.serial }})</option>
+                {% endfor %}
+            </select>
+            
+            <label>Cliente:</label>
+            <select name="cliente" required>
+                <option value="">Selecciona...</option>
+                {% for c in clientes %}
+                <option value="{{ c.id }}">{{ c.nombre }} - DPI: {{ c.dpi|default:"N/A" }}</option>
+                {% endfor %}
+            </select>
+            
+            <label>Accesorios entregados:</label>
+            <div class="checkboxes">
+                {% for a in accesorios %}
+                <label><input type="checkbox" name="accesorios" value="{{ a.id }}"> {{ a.nombre }}</label>
+                {% endfor %}
+            </div>
+            
+            <label>Observaciones:</label>
+            <textarea name="observaciones" rows="3"></textarea>
+            
+            <button type="submit">Crear Asignacion y Generar Hoja</button>
+        </form>
+    </div>
+</body>
+</html>

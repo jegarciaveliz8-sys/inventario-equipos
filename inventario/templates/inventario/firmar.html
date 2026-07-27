@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Firmar Hoja de Responsabilidad</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f5f5f5;
+            padding: 15px;
+            touch-action: none;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            text-align: center;
+            color: #1a1a2e;
+            font-size: 1.3rem;
+            margin-bottom: 15px;
+        }
+        .info-box {
+            background: #f8f9fa;
+            border-left: 4px solid #764ba2;
+            padding: 12px;
+            margin-bottom: 15px;
+            border-radius: 4px;
+        }
+        .info-box p { margin: 4px 0; font-size: 0.95rem; color: #333; }
+        .info-box strong { color: #764ba2; }
+        .condiciones {
+            background: #fffbeb;
+            border: 1px solid #f59e0b;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+            color: #92400e;
+        }
+        .canvas-container {
+            border: 2px dashed #ccc;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            background: white;
+            position: relative;
+        }
+        canvas {
+            display: block;
+            width: 100%;
+            height: 250px;
+            touch-action: none;
+        }
+        .canvas-label {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #999;
+            font-size: 1rem;
+            pointer-events: none;
+        }
+        .botones {
+            display: flex;
+            gap: 10px;
+        }
+        .btn {
+            flex: 1;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            cursor: pointer;
+            font-weight: 600;
+        }
+        .btn-borrar {
+            background: #e5e7eb;
+            color: #374151;
+        }
+        .btn-firmar {
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        .mensaje {
+            text-align: center;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+        }
+        .exito { background: #d1fae5; color: #065f46; }
+        .error { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Hoja de Responsabilidad</h1>
+        
+        <div class="info-box">
+            <p><strong>Equipo:</strong> {{ hoja.asignacion.equipo.nombre }}</p>
+            <p><strong>Serial:</strong> {{ hoja.asignacion.equipo.serial }}</p>
+            <p><strong>Responsable:</strong> {{ hoja.asignacion.cliente.nombre }}</p>
+            <p><strong>DPI:</strong> {{ hoja.asignacion.cliente.dpi|default:"N/A" }}</p>
+        </div>
+        
+        <div class="condiciones">
+            <strong>Condiciones:</strong><br>
+            {{ hoja.condiciones }}
+        </div>
+        
+        <p style="margin-bottom: 10px; color: #555; font-size: 0.9rem;">
+            Dibuja tu firma en el recuadro con tu dedo o un estilete:
+        </p>
+        
+        <div class="canvas-container">
+            <canvas id="firmaCanvas"></canvas>
+            <div class="canvas-label" id="canvasLabel">Toca aqui para firmar</div>
+        </div>
+        
+        <div class="botones">
+            <button class="btn btn-borrar" onclick="borrarFirma()">Borrar</button>
+            <button class="btn btn-firmar" id="btnFirmar" onclick="guardarFirma()">Confirmar Firma</button>
+        </div>
+        
+        <div class="mensaje" id="mensaje"></div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('firmaCanvas');
+        const ctx = canvas.getContext('2d');
+        const label = document.getElementById('canvasLabel');
+        const btnFirmar = document.getElementById('btnFirmar');
+        const mensaje = document.getElementById('mensaje');
+        
+        function ajustarCanvas() {
+            const rect = canvas.parentElement.getBoundingClientRect();
+            canvas.width = rect.width;
+            canvas.height = 250;
+            ctx.strokeStyle = '#1a1a2e';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+        }
+        ajustarCanvas();
+        window.addEventListener('resize', ajustarCanvas);
+        
+        let dibujando = false;
+        let hayFirma = false;
+        
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return {
+                x: clientX - rect.left,
+                y: clientY - rect.top
+            };
+        }
+        
+        function iniciar(e) {
+            e.preventDefault();
+            dibujando = true;
+            label.style.display = 'none';
+            const pos = getPos(e);
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+        
+        function dibujar(e) {
+            if (!dibujando) return;
+            e.preventDefault();
+            const pos = getPos(e);
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            hayFirma = true;
+        }
+        
+        function terminar(e) {
+            if (!dibujando) return;
+            e.preventDefault();
+            dibujando = false;
+            ctx.closePath();
+        }
+        
+        canvas.addEventListener('mousedown', iniciar);
+        canvas.addEventListener('mousemove', dibujar);
+        canvas.addEventListener('mouseup', terminar);
+        canvas.addEventListener('mouseout', terminar);
+        
+        canvas.addEventListener('touchstart', iniciar, {passive: false});
+        canvas.addEventListener('touchmove', dibujar, {passive: false});
+        canvas.addEventListener('touchend', terminar);
+        
+        function borrarFirma() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            hayFirma = false;
+            label.style.display = 'block';
+        }
+        
+        async function guardarFirma() {
+            if (!hayFirma) {
+                mostrarMensaje('Por favor dibuja tu firma primero.', 'error');
+                return;
+            }
+            
+            btnFirmar.disabled = true;
+            btnFirmar.textContent = 'Guardando...';
+            
+            const firmaData = canvas.toDataURL('image/png');
+            
+            try {
+                const response = await fetch('/hoja/{{ hoja.id }}/guardar-firma/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: 'firma=' + encodeURIComponent(firmaData)
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    mostrarMensaje('Firma guardada exitosamente! El documento ha sido generado.', 'exito');
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 2000);
+                } else {
+                    mostrarMensaje('Error: ' + data.error, 'error');
+                    btnFirmar.disabled = false;
+                    btnFirmar.textContent = 'Confirmar Firma';
+                }
+            } catch (err) {
+                mostrarMensaje('Error de conexion: ' + err.message, 'error');
+                btnFirmar.disabled = false;
+                btnFirmar.textContent = 'Confirmar Firma';
+            }
+        }
+        
+        function mostrarMensaje(texto, tipo) {
+            mensaje.textContent = texto;
+            mensaje.className = 'mensaje ' + tipo;
+            mensaje.style.display = 'block';
+        }
+    </script>
+</body>
+</html>

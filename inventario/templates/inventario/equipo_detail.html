@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ equipo.nombre }}</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; background: #f5f5f5; padding: 20px; }
+        .container { max-width: 800px; margin: 0 auto; background: white; padding: 25px; border-radius: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+        h1 { color: #1a1a2e; }
+        .section { margin: 20px 0; padding: 15px; background: #f8f9fa; border-radius: 8px; }
+        .section h3 { color: #764ba2; margin-top: 0; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }
+        th { background: #667eea; color: white; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <p><a href="{% url 'inventario:equipo_list' %}">← Volver a equipos</a></p>
+        <h1>{{ equipo.nombre }}</h1>
+        <p><strong>Serial:</strong> {{ equipo.serial }} | <strong>Marca:</strong> {{ equipo.marca }} | <strong>Modelo:</strong> {{ equipo.modelo }}</p>
+        <p><strong>Estado:</strong> {{ equipo.get_estado_display }} | <strong>Registrado:</strong> {{ equipo.fecha_registro|date:"d/m/Y" }}</p>
+        
+        <div class="section">
+            <h3>📋 Historial de Asignaciones</h3>
+            <table>
+                <tr><th>Cliente</th><th>Fecha</th><th>Activa</th></tr>
+                {% for a in historial %}
+                <tr><td>{{ a.cliente }}</td><td>{{ a.fecha_asignacion|date:"d/m/Y" }}</td><td>{% if a.activa %}Sí{% else %}No{% endif %}</td></tr>
+                {% empty %}
+                <tr><td colspan="3">Sin historial</td></tr>
+                {% endfor %}
+            </table>
+        </div>
+        
+        <div class="section">
+            <h3>🔧 Cambios y Reparaciones</h3>
+            <table>
+                <tr><th>Tipo</th><th>Descripción</th><th>Técnico</th><th>Fecha</th></tr>
+                {% for c in cambios %}
+                <tr><td>{{ c.get_tipo_display }}</td><td>{{ c.descripcion }}</td><td>{{ c.tecnico }}</td><td>{{ c.fecha|date:"d/m/Y" }}</td></tr>
+                {% empty %}
+                <tr><td colspan="4">Sin reparaciones</td></tr>
+                {% endfor %}
+            </table>
+        </div>
+    </div>
+</body>
+</html>
