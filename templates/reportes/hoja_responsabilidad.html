@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { font-family: Arial, sans-serif; margin: 40px; color: #333; }
+    .header { text-align: center; border-bottom: 3px solid #0d6efd; padding-bottom: 15px; margin-bottom: 30px; }
+    .header h1 { margin: 0; font-size: 24px; color: #0d6efd; }
+    .box { border: 1px solid #ccc; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+    .box h3 { margin-top: 0; font-size: 14px; text-transform: uppercase; color: #666; border-bottom: 1px solid #eee; padding-bottom: 5px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    td { padding: 8px 0; }
+    .label { font-weight: bold; width: 30%; color: #555; }
+    .firma-box { margin-top: 40px; border-top: 1px solid #333; width: 300px; padding-top: 10px; text-align: center; }
+    .condiciones { font-size: 11px; line-height: 1.5; margin-top: 30px; padding: 15px; background: #f8f9fa; border-left: 4px solid #0d6efd; }
+    .badge { display: inline-block; padding: 3px 10px; border-radius: 3px; font-size: 12px; font-weight: bold; }
+    .badge-success { background: #d1e7dd; color: #0f5132; }
+    .badge-warning { background: #fff3cd; color: #664d03; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>HOJA DE RESPONSABILIDAD</h1>
+    <p>No. {{ hoja.id }} | Fecha: {{ fecha|date:"d/m/Y H:i" }}</p>
+  </div>
+
+  <div class="box">
+    <h3>Datos del Cliente</h3>
+    <table>
+      <tr><td class="label">Nombre:</td><td>{{ cliente.nombre }}</td></tr>
+      <tr><td class="label">DPI/ID:</td><td>{{ cliente.dpi|default:"No registrado" }}</td></tr>
+      <tr><td class="label">Telefono:</td><td>{{ cliente.telefono|default:"No registrado" }}</td></tr>
+      <tr><td class="label">Email:</td><td>{{ cliente.email|default:"No registrado" }}</td></tr>
+    </table>
+  </div>
+
+  <div class="box">
+    <h3>Datos del Equipo</h3>
+    <table>
+      <tr><td class="label">Equipo:</td><td>{{ equipo.nombre }}</td></tr>
+      <tr><td class="label">Marca/Modelo:</td><td>{{ equipo.marca }} {{ equipo.modelo }}</td></tr>
+      <tr><td class="label">Serial:</td><td>{{ equipo.serial }}</td></tr>
+      <tr><td class="label">Descripcion:</td><td>{{ equipo.descripcion|default:"Ninguna" }}</td></tr>
+    </table>
+  </div>
+
+  <div class="box">
+    <h3>Detalles de la Asignacion</h3>
+    <table>
+      <tr><td class="label">Fecha de entrega:</td><td>{{ asignacion.fecha_asignacion|date:"d/m/Y H:i" }}</td></tr>
+      <tr><td class="label">Accesorios:</td><td>{% for acc in asignacion.accesorios_entregados.all %}{{ acc.nombre }}{% if not forloop.last %}, {% endif %}{% empty %}Ninguno{% endfor %}</td></tr>
+      <tr><td class="label">Observaciones:</td><td>{{ asignacion.observaciones|default:"Ninguna" }}</td></tr>
+      <tr><td class="label">Estado de firma:</td><td>{% if hoja.firmado %}<span class="badge badge-success">FIRMADO el {{ hoja.fecha_firma|date:"d/m/Y H:i" }}</span>{% else %}<span class="badge badge-warning">PENDIENTE DE FIRMA</span>{% endif %}</td></tr>
+    </table>
+  </div>
+
+  <div class="condiciones">
+    <strong>CONDICIONES:</strong><br>
+    {{ hoja.condiciones|linebreaksbr }}
+  </div>
+
+  <div style="margin-top: 60px; display: flex; justify-content: space-between;">
+    <div class="firma-box">
+      <p><strong>Entrega:</strong> _________________________</p>
+      <p style="font-size: 11px; color: #666;">Nombre y firma del responsable</p>
+    </div>
+    <div class="firma-box">
+      <p><strong>Recibe:</strong> _________________________</p>
+      <p style="font-size: 11px; color: #666;">{{ cliente.nombre }}</p>
+      {% if hoja.firma_imagen %}
+        <img src="{{ hoja.firma_imagen.path }}" style="max-width: 250px; margin-top: 10px;">
+      {% endif %}
+    </div>
+  </div>
+</body>
+</html>

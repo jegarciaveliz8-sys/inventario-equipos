@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <h1 class="mb-4">📦 Inventario de Equipos</h1>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h3>{{ total_equipos }}</h3><small>Total Equipos</small></div></div></div>
+    <div class="col-md-2"><div class="card text-center border-primary"><div class="card-body text-primary"><h3>{{ asignados }}</h3><small>Asignados</small></div></div></div>
+    <div class="col-md-2"><div class="card text-center border-warning"><div class="card-body text-warning"><h3>{{ en_reparacion }}</h3><small>En Reparacion</small></div></div></div>
+    <div class="col-md-2"><div class="card text-center border-success"><div class="card-body text-success"><h3>{{ disponibles }}</h3><small>Disponibles</small></div></div></div>
+    <div class="col-md-2"><div class="card text-center border-info"><div class="card-body text-info"><h3>{{ clientes }}</h3><small>Clientes</small></div></div></div>
+    <div class="col-md-2"><div class="card text-center border-danger"><div class="card-body text-danger"><h3>{{ hojas_pendientes }}</h3><small>Hojas Pendientes</small></div></div></div>
+  </div>
+
+  <div class="row mb-4">
+    <div class="col-md-6"><canvas id="estadosChart"></canvas></div>
+    <div class="col-md-6"><canvas id="trendChart"></canvas></div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header d-flex justify-content-between">
+          <strong>⚠️ Alertas sin leer</strong>
+          <a href="{% url 'verificar_alertas' %}" class="btn btn-sm btn-outline-primary">Verificar ahora</a>
+        </div>
+        <ul class="list-group list-group-flush">
+          {% for a in alertas %}
+          <li class="list-group-item d-flex justify-content-between">
+            <span><span class="badge bg-{% if a.tipo == 'garantia' %}warning{% elif a.tipo == 'stock' %}danger{% else %}secondary{% endif %}">{{ a.get_tipo_display }}</span> {{ a.titulo }}</span>
+            <button class="btn btn-sm btn-light" onclick="marcarLeida('{{ a.id }}', this)">✓</button>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">No hay alertas pendientes</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header"><strong>📉 Stock bajo</strong></div>
+        <ul class="list-group list-group-flush">
+          {% for a in stock_bajo %}
+          <li class="list-group-item d-flex justify-content-between">
+            {{ a.nombre }}
+            <span class="badge bg-danger">{{ a.cantidad }} / min {{ a.stock_minimo }}</span>
+          </li>
+          {% empty %}
+          <li class="list-group-item text-muted">Todo en orden</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+fetch('/api/stats/')
+  .then(r => r.json())
+  .then(data => {
+    new Chart(document.getElementById('estadosChart'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Disponibles', 'Asignados', 'En Reparacion', 'Dado de Baja'],
+        datasets: [{
+          data: [data.totales.disponibles, data.totales.asignados, data.totales.reparacion, data.totales.baja],
+          backgroundColor: ['#198754', '#0d6efd', '#ffc107', '#6c757d']
+        }]
+      },
+      options: { responsive: true, plugins: { title: { display: true, text: 'Equipos por Estado' } } }
+    });
+
+    new Chart(document.getElementById('trendChart'), {
+      type: 'line',
+      data: {
+        labels: data.asignaciones_trend.map(d => d.mes),
+        datasets: [{
+          label: 'Asignaciones',
+          data: data.asignaciones_trend.map(d => d.total),
+          borderColor: '#6610f2',
+          tension: 0.4,
+          fill: true,
+          backgroundColor: 'rgba(102,16,242,0.1)'
+        }]
+      },
+      options: { responsive: true, plugins: { title: { display: true, text: 'Tendencia Asignaciones (6 meses)' } } }
+    });
+  });
+
+function marcarLeida(pk, btn) {
+  fetch('/alertas/' + pk + '/leida/', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
+    .then(() => btn.closest('li').remove());
+}
+</script>
+{% endblock %}

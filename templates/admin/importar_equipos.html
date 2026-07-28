@@ -1,0 +1,15 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<div class="container py-4">
+  <h1>📥 Importar Equipos desde Excel</h1>
+  <p class="text-muted">El archivo debe tener las columnas: Nombre, Marca, Modelo, Serial (fila 1 = headers)</p>
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+      <input type="file" name="archivo" accept=".xlsx,.xls" class="form-control" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Importar</button>
+    <a href="/admin/inventario/equipo/" class="btn btn-secondary">Cancelar</a>
+  </form>
+</div>
+{% endblock %}

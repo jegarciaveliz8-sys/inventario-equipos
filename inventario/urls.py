@@ -1,15 +1,13 @@
 from django.urls import path
 from . import views
 
-app_name = 'inventario'
-
 urlpatterns = [
-    path('', views.dashboard, name='dashboard'),
-    path('equipos/', views.equipo_list, name='equipo_list'),
-    path('equipos/<int:equipo_id>/', views.equipo_detail, name='equipo_detail'),
-    path('asignaciones/', views.asignacion_list, name='asignacion_list'),
-    path('asignaciones/nueva/', views.asignacion_nueva, name='asignacion_nueva'),
-    path('hoja/<int:hoja_id>/firmar/', views.firmar_hoja, name='firmar_hoja'),
-    path('hoja/<int:hoja_id>/guardar-firma/', views.guardar_firma, name='guardar_firma'),
-    path('hoja/<int:hoja_id>/pdf/', views.descargar_pdf, name='descargar_pdf'),
+    path('', views.DashboardView.as_view(), name='dashboard'),
+    path('api/stats/', views.dashboard_stats_api, name='dashboard_stats_api'),
+    path('equipos/<uuid:uuid>/', views.EquipoFichaPublicaView.as_view(), name='equipo_ficha_publica'),
+    path('hojas/<int:pk>/pdf/', views.generar_pdf_hoja, name='generar_pdf_hoja'),
+    path('hojas/<int:pk>/firmar/', views.firmar_hoja, name='firmar_hoja'),
+    path('importar-equipos/', views.importar_equipos_excel, name='importar_equipos'),
+    path('verificar-alertas/', views.verificar_alertas, name='verificar_alertas'),
+    path('alertas/<int:pk>/leida/', views.marcar_alerta_leida, name='marcar_alerta_leida'),
 ]
