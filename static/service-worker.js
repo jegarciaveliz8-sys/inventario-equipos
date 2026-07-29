@@ -1,8 +1,9 @@
 const CACHE_NAME = 'inventario-v1';
 const urlsToCache = [
   '/',
-  '/static/css/bootstrap.min.css',
-  '/static/js/bootstrap.bundle.min.js'
+  '/escanear-qr/',
+  '/buscar/',
+  '/reportes/equipos/'
 ];
 
 self.addEventListener('install', event => {
