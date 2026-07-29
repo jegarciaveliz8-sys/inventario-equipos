@@ -10,3 +10,5 @@ django-filter
 django-crispy-forms
 crispy-bootstrap5
 python-dateutil
+gunicorn
+whitenoise
