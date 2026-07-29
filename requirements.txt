@@ -12,3 +12,6 @@ crispy-bootstrap5
 python-dateutil
 gunicorn
 whitenoise
+django-allauth
+drf-spectacular
+django-guardian

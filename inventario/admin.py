@@ -6,18 +6,25 @@ from django.contrib import messages
 from simple_history.admin import SimpleHistoryAdmin
 from .models import (
     Equipo, Cliente, Accesorio, Asignacion, CambioReparacion,
-    HojaResponsabilidad, Alerta, Evidencia, Notificacion
+    HojaResponsabilidad, Alerta, Evidencia, Notificacion,
+    Sucursal, MantenimientoPreventivo
 )
+
+
+@admin.register(Sucursal)
+class SucursalAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'direccion', 'encargado', 'activa']
+    search_fields = ['nombre', 'direccion']
 
 
 @admin.register(Equipo)
 class EquipoAdmin(SimpleHistoryAdmin):
-    list_display = ['nombre', 'serial', 'marca', 'estado_coloreado', 'fecha_registro', 'acciones_estado']
-    list_filter = ['estado', 'marca', 'fecha_registro']
+    list_display = ['nombre', 'serial', 'marca', 'estado_coloreado', 'sucursal', 'fecha_registro', 'acciones_estado']
+    list_filter = ['estado', 'marca', 'sucursal', 'fecha_registro']
     search_fields = ['nombre', 'serial', 'marca', 'modelo']
     readonly_fields = ['uuid', 'qr_preview', 'fecha_registro', 'estado']
     fieldsets = (
-        (None, {'fields': ('uuid', 'nombre', 'marca', 'modelo', 'serial', 'descripcion', 'estado')}),
+        (None, {'fields': ('uuid', 'nombre', 'marca', 'modelo', 'serial', 'descripcion', 'estado', 'sucursal')}),
         ('Detalles', {'fields': ('fecha_fin_garantia', 'foto', 'qr_preview')}),
         ('Auditoria', {'fields': ('fecha_registro',)}),
     )
@@ -123,11 +130,17 @@ class AlertaAdmin(admin.ModelAdmin):
 @admin.register(Evidencia)
 class EvidenciaAdmin(admin.ModelAdmin):
     list_display = ['equipo', 'tipo', 'descripcion', 'fecha', 'subido_por']
-    list_filter = ['tipo', 'fecha']
 
 
 @admin.register(Notificacion)
 class NotificacionAdmin(admin.ModelAdmin):
     list_display = ['asunto', 'destinatario', 'enviado', 'fecha_creacion']
     list_filter = ['enviado', 'tipo']
+    readonly_fields = ['uuid']
+
+
+@admin.register(MantenimientoPreventivo)
+class MantenimientoPreventivoAdmin(SimpleHistoryAdmin):
+    list_display = ['equipo', 'tipo', 'frecuencia_meses', 'proxima_fecha', 'completado']
+    list_filter = ['tipo', 'completado']
     readonly_fields = ['uuid']
