@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <h2>📊 Reporte de Equipos</h2>
+
+  <form method="get" class="row g-3 mb-4">
+    <div class="col-md-3">
+      <label class="form-label">Marca</label>
+      <select name="marca" class="form-select">
+        <option value="">Todas</option>
+        {% for m in marcas %}
+        <option value="{{ m }}" {% if filtros.marca == m %}selected{% endif %}>{{ m }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Estado</label>
+      <select name="estado" class="form-select">
+        <option value="">Todos</option>
+        <option value="disponible" {% if filtros.estado == 'disponible' %}selected{% endif %}>Disponible</option>
+        <option value="asignado" {% if filtros.estado == 'asignado' %}selected{% endif %}>Asignado</option>
+        <option value="en_reparacion" {% if filtros.estado == 'en_reparacion' %}selected{% endif %}>En Reparacion</option>
+        <option value="dado_de_baja" {% if filtros.estado == 'dado_de_baja' %}selected{% endif %}>Dado de Baja</option>
+      </select>
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Desde</label>
+      <input type="date" name="fecha_desde" class="form-control" value="{{ filtros.fecha_desde }}">
+    </div>
+    <div class="col-md-3">
+      <label class="form-label">Hasta</label>
+      <input type="date" name="fecha_hasta" class="form-control" value="{{ filtros.fecha_hasta }}">
+    </div>
+    <div class="col-12">
+      <button type="submit" class="btn btn-primary">Filtrar</button>
+      <a href="?{% if filtros.marca %}marca={{ filtros.marca }}&{% endif %}{% if filtros.estado %}estado={{ filtros.estado }}&{% endif %}{% if filtros.fecha_desde %}fecha_desde={{ filtros.fecha_desde }}&{% endif %}{% if filtros.fecha_hasta %}fecha_hasta={{ filtros.fecha_hasta }}&{% endif %}exportar=excel" class="btn btn-success">📥 Excel</a>
+      <a href="?{% if filtros.marca %}marca={{ filtros.marca }}&{% endif %}{% if filtros.estado %}estado={{ filtros.estado }}&{% endif %}{% if filtros.fecha_desde %}fecha_desde={{ filtros.fecha_desde }}&{% endif %}{% if filtros.fecha_hasta %}fecha_hasta={{ filtros.fecha_hasta }}&{% endif %}exportar=pdf" class="btn btn-danger">📄 PDF</a>
+    </div>
+  </form>
+
+  <table class="table table-striped">
+    <thead><tr><th>Nombre</th><th>Marca</th><th>Modelo</th><th>Serial</th><th>Estado</th><th>Registro</th></tr></thead>
+    <tbody>
+      {% for e in equipos %}
+      <tr>
+        <td>{{ e.nombre }}</td>
+        <td>{{ e.marca }}</td>
+        <td>{{ e.modelo }}</td>
+        <td><code>{{ e.serial }}</code></td>
+        <td><span class="badge bg-{% if e.estado == 'disponible' %}success{% elif e.estado == 'asignado' %}primary{% elif e.estado == 'en_reparacion' %}warning{% else %}secondary{% endif %}">{{ e.get_estado_display }}</span></td>
+        <td>{{ e.fecha_registro|date:"d/m/Y" }}</td>
+      </tr>
+      {% empty %}
+      <tr><td colspan="6" class="text-center text-muted">Sin resultados</td></tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</div>
+{% endblock %}

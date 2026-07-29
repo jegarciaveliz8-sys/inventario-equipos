@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <h2>🔍 Busqueda Global</h2>
+  <form method="get" class="mb-4">
+    <div class="input-group">
+      <input type="text" name="q" class="form-control" placeholder="Buscar por serial, nombre, cliente, marca..." value="{{ q }}">
+      <button class="btn btn-primary" type="submit">Buscar</button>
+    </div>
+  </form>
+
+  {% if q %}
+    <h4>Equipos ({{ resultados.equipos|length }})</h4>
+    {% for e in resultados.equipos %}
+      <div class="card mb-2"><div class="card-body py-2">
+        <a href="/admin/inventario/equipo/{{ e.id }}/change/">{{ e }}</a> - <span class="badge bg-secondary">{{ e.get_estado_display }}</span>
+      </div></div>
+    {% empty %}<p class="text-muted">Ninguno</p>{% endfor %}
+
+    <h4 class="mt-4">Clientes ({{ resultados.clientes|length }})</h4>
+    {% for c in resultados.clientes %}
+      <div class="card mb-2"><div class="card-body py-2">
+        <a href="/admin/inventario/cliente/{{ c.id }}/change/">{{ c }}</a> - {{ c.email }}
+      </div></div>
+    {% empty %}<p class="text-muted">Ninguno</p>{% endfor %}
+
+    <h4 class="mt-4">Asignaciones ({{ resultados.asignaciones|length }})</h4>
+    {% for a in resultados.asignaciones %}
+      <div class="card mb-2"><div class="card-body py-2">
+        <a href="/admin/inventario/asignacion/{{ a.id }}/change/">{{ a }}</a> - {% if a.activa %}<span class="badge bg-success">Activa</span>{% endif %}
+      </div></div>
+    {% empty %}<p class="text-muted">Ninguna</p>{% endfor %}
+
+    <h4 class="mt-4">Reparaciones ({{ resultados.reparaciones|length }})</h4>
+    {% for r in resultados.reparaciones %}
+      <div class="card mb-2"><div class="card-body py-2">
+        <a href="/admin/inventario/cambioreparacion/{{ r.id }}/change/">{{ r }}</a> - {{ r.fecha|date:"d/m/Y" }}
+      </div></div>
+    {% empty %}<p class="text-muted">Ninguna</p>{% endfor %}
+  {% endif %}
+</div>
+{% endblock %}

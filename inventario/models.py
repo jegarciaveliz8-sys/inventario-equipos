@@ -133,7 +133,7 @@ class Asignacion(models.Model):
 
     def devolver(self):
         self.activa = False
-        self.fecha_devolucion = timezone.now()
+        self.fecha_devolucion = models.functions.Now()
         self.equipo.estado = 'disponible'
         self.equipo.save()
         self.save()
@@ -210,3 +210,52 @@ class Alerta(models.Model):
 
     def __str__(self):
         return self.titulo
+
+
+# ========== NUEVO: EVIDENCIA ==========
+class Evidencia(models.Model):
+    TIPOS = [
+        ('asignacion', 'Entrega/Asignacion'),
+        ('devolucion', 'Devolucion'),
+        ('reparacion', 'Reparacion'),
+        ('general', 'General'),
+    ]
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
+    equipo = models.ForeignKey(Equipo, on_delete=models.CASCADE, related_name='evidencias')
+    tipo = models.CharField(max_length=20, choices=TIPOS, default='general')
+    imagen = models.ImageField(upload_to='evidencias/%Y/%m/')
+    descripcion = models.CharField(max_length=255, blank=True)
+    fecha = models.DateTimeField(auto_now_add=True)
+    subido_por = models.ForeignKey('auth.User', on_delete=models.SET_NULL, null=True, blank=True)
+
+    class Meta:
+        ordering = ['-fecha']
+        verbose_name = 'Evidencia'
+        verbose_name_plural = 'Evidencias'
+
+    def __str__(self):
+        return f"{self.get_tipo_display()} - {self.equipo}"
+
+
+# ========== NUEVO: NOTIFICACION ==========
+class Notificacion(models.Model):
+    TIPOS = [
+        ('email', 'Email'),
+        ('sistema', 'Sistema'),
+    ]
+    uuid = models.UUIDField(default=uuid.uuid4, editable=False)
+    tipo = models.CharField(max_length=20, choices=TIPOS, default='email')
+    destinatario = models.EmailField()
+    asunto = models.CharField(max_length=255)
+    mensaje = models.TextField()
+    enviado = models.BooleanField(default=False)
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_envio = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ['-fecha_creacion']
+        verbose_name = 'Notificacion'
+        verbose_name_plural = 'Notificaciones'
+
+    def __str__(self):
+        return self.asunto

@@ -8,16 +8,19 @@ from django.views.decorators.http import require_POST
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Count
+from django.db.models import Count, Q
 from django.template.loader import render_to_string
 from dateutil.relativedelta import relativedelta
 from weasyprint import HTML
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Equipo, Cliente, Asignacion, CambioReparacion, HojaResponsabilidad, Accesorio, Alerta
+from .models import (
+    Equipo, Cliente, Asignacion, CambioReparacion,
+    HojaResponsabilidad, Accesorio, Alerta, Evidencia
+)
 
 
-# ─── DASHBOARD ───────────────────────────────────────────────
+# ========== 1. DASHBOARD ==========
 
 class DashboardView(TemplateView):
     template_name = 'inventario/dashboard.html'
@@ -36,7 +39,7 @@ class DashboardView(TemplateView):
         return ctx
 
 
-# ─── API DASHBOARD (Chart.js) ────────────────────────────────
+# ========== 2. API STATS ==========
 
 @api_view(['GET'])
 def dashboard_stats_api(request):
@@ -48,33 +51,23 @@ def dashboard_stats_api(request):
     dado_baja = Equipo.objects.filter(estado='dado_de_baja').count()
 
     por_marca = list(Equipo.objects.values('marca').annotate(total=Count('id')).order_by('-total')[:8])
-
     asignaciones_mes = []
     for i in range(5, -1, -1):
         mes = hoy - relativedelta(months=i)
-        count = Asignacion.objects.filter(
-            fecha_asignacion__year=mes.year,
-            fecha_asignacion__month=mes.month
-        ).count()
+        count = Asignacion.objects.filter(fecha_asignacion__year=mes.year, fecha_asignacion__month=mes.month).count()
         asignaciones_mes.append({'mes': mes.strftime('%b %Y'), 'total': count})
 
     reparaciones_tipo = list(CambioReparacion.objects.values('tipo').annotate(total=Count('id')))
 
     return Response({
-        'totales': {
-            'total': total,
-            'asignados': asignados,
-            'reparacion': en_reparacion,
-            'disponibles': disponibles,
-            'baja': dado_baja
-        },
+        'totales': {'total': total, 'asignados': asignados, 'reparacion': en_reparacion, 'disponibles': disponibles, 'baja': dado_baja},
         'por_marca': por_marca,
         'asignaciones_trend': asignaciones_mes,
         'reparaciones_tipo': reparaciones_tipo,
     })
 
 
-# ─── FICHA PUBLICA POR QR ────────────────────────────────────
+# ========== 3. FICHA PUBLICA QR ==========
 
 class EquipoFichaPublicaView(DetailView):
     model = Equipo
@@ -88,44 +81,159 @@ class EquipoFichaPublicaView(DetailView):
         ctx['asignacion_actual'] = self.object.asignaciones.filter(activa=True).first()
         ctx['historial_reparaciones'] = self.object.cambios.all()[:10]
         ctx['historial_completo'] = self.object.history.all()[:10]
+        ctx['evidencias'] = self.object.evidencias.all()[:6]
         return ctx
 
 
-# ─── GENERAR PDF HOJA RESPONSABILIDAD ────────────────────────
+# ========== 4. ESCANEAR QR (camara) ==========
+
+def escanear_qr(request):
+    return render(request, 'inventario/escanear_qr.html')
+
+
+# ========== 5. BUSQUEDA GLOBAL ==========
+
+@staff_member_required
+def busqueda_global(request):
+    q = request.GET.get('q', '').strip()
+    resultados = {
+        'equipos': [],
+        'clientes': [],
+        'asignaciones': [],
+        'reparaciones': [],
+    }
+    if q:
+        resultados['equipos'] = Equipo.objects.filter(
+            Q(nombre__icontains=q) | Q(serial__icontains=q) | Q(marca__icontains=q) | Q(modelo__icontains=q)
+        )[:10]
+        resultados['clientes'] = Cliente.objects.filter(
+            Q(nombre__icontains=q) | Q(dpi__icontains=q) | Q(email__icontains=q)
+        )[:10]
+        resultados['asignaciones'] = Asignacion.objects.filter(
+            Q(equipo__nombre__icontains=q) | Q(equipo__serial__icontains=q) | Q(cliente__nombre__icontains=q)
+        )[:10]
+        resultados['reparaciones'] = CambioReparacion.objects.filter(
+            Q(equipo__nombre__icontains=q) | Q(equipo__serial__icontains=q) | Q(descripcion__icontains=q)
+        )[:10]
+    return render(request, 'inventario/busqueda.html', {'q': q, 'resultados': resultados})
+
+
+# ========== 6. REPORTES CON FILTROS ==========
+
+@staff_member_required
+def reporte_equipos(request):
+    equipos = Equipo.objects.all()
+    marca = request.GET.get('marca', '')
+    estado = request.GET.get('estado', '')
+    fecha_desde = request.GET.get('fecha_desde', '')
+    fecha_hasta = request.GET.get('fecha_hasta', '')
+
+    if marca:
+        equipos = equipos.filter(marca__icontains=marca)
+    if estado:
+        equipos = equipos.filter(estado=estado)
+    if fecha_desde:
+        equipos = equipos.filter(fecha_registro__date__gte=fecha_desde)
+    if fecha_hasta:
+        equipos = equipos.filter(fecha_registro__date__lte=fecha_hasta)
+
+    # Exportar a Excel
+    if request.GET.get('exportar') == 'excel':
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = 'Equipos'
+        ws.append(['Nombre', 'Marca', 'Modelo', 'Serial', 'Estado', 'Fecha Registro'])
+        for e in equipos:
+            ws.append([e.nombre, e.marca, e.modelo, e.serial, e.get_estado_display(), e.fecha_registro.strftime('%d/%m/%Y')])
+        buffer = BytesIO()
+        wb.save(buffer)
+        buffer.seek(0)
+        response = HttpResponse(buffer, content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+        response['Content-Disposition'] = 'attachment; filename=reporte_equipos.xlsx'
+        return response
+
+    # Exportar a PDF
+    if request.GET.get('exportar') == 'pdf':
+        html_string = render_to_string('reportes/reporte_equipos.html', {'equipos': equipos, 'filtros': request.GET})
+        html = HTML(string=html_string, base_url=request.build_absolute_uri())
+        pdf_buffer = BytesIO()
+        html.write_pdf(pdf_buffer)
+        pdf_buffer.seek(0)
+        response = HttpResponse(pdf_buffer, content_type='application/pdf')
+        response['Content-Disposition'] = 'attachment; filename=reporte_equipos.pdf'
+        return response
+
+    marcas = Equipo.objects.exclude(marca='').values_list('marca', flat=True).distinct()
+    return render(request, 'inventario/reporte_equipos.html', {
+        'equipos': equipos,
+        'marcas': marcas,
+        'filtros': request.GET
+    })
+
+
+# ========== 7. EVIDENCIA (fotos antes/después) ==========
+
+@staff_member_required
+def subir_evidencia(request):
+    if request.method == 'POST':
+        equipo_id = request.POST.get('equipo')
+        tipo = request.POST.get('tipo')
+        descripcion = request.POST.get('descripcion')
+        imagen = request.FILES.get('imagen')
+        if equipo_id and imagen:
+            equipo = get_object_or_404(Equipo, pk=equipo_id)
+            Evidencia.objects.create(
+                equipo=equipo,
+                tipo=tipo,
+                descripcion=descripcion,
+                imagen=imagen,
+                subido_por=request.user
+            )
+            messages.success(request, 'Evidencia subida correctamente.')
+        return redirect('subir_evidencia')
+
+    equipos = Equipo.objects.all()
+    return render(request, 'inventario/subir_evidencia.html', {'equipos': equipos})
+
+
+# ========== 8. PDF HOJA RESPONSABILIDAD ==========
 
 @staff_member_required
 def generar_pdf_hoja(request, pk):
     hoja = get_object_or_404(HojaResponsabilidad, pk=pk)
     html_string = render_to_string('reportes/hoja_responsabilidad.html', {
-        'hoja': hoja,
-        'asignacion': hoja.asignacion,
-        'equipo': hoja.asignacion.equipo,
-        'cliente': hoja.asignacion.cliente,
+        'hoja': hoja, 'asignacion': hoja.asignacion,
+        'equipo': hoja.asignacion.equipo, 'cliente': hoja.asignacion.cliente,
         'fecha': timezone.now(),
     })
     html = HTML(string=html_string, base_url=request.build_absolute_uri())
     pdf_buffer = BytesIO()
     html.write_pdf(pdf_buffer)
     pdf_buffer.seek(0)
-
     response = HttpResponse(pdf_buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename=hoja_{hoja.asignacion.equipo.serial}.pdf'
     return response
 
 
-# ─── FIRMA DIGITAL (CANVAS) ──────────────────────────────────
+# ========== 9. PAGINA FIRMA ==========
+
+def pagina_firma(request, pk):
+    hoja = get_object_or_404(HojaResponsabilidad, pk=pk)
+    return render(request, 'inventario/firmar_hoja.html', {'hoja': hoja})
+
+
+# ========== 10. FIRMA DIGITAL ==========
 
 @require_POST
 def firmar_hoja(request, pk):
     hoja = get_object_or_404(HojaResponsabilidad, pk=pk)
     import base64
     from django.core.files.base import ContentFile
-
     data = json.loads(request.body)
     firma_data = data.get('firma')
     if firma_data:
-        format, imgstr = firma_data.split(';base64,')
-        ext = format.split('/')[-1]
+        fmt, imgstr = firma_data.split(';base64,')
+        ext = fmt.split('/')[-1]
         hoja.firma_imagen.save(f'firma_{hoja.id}.{ext}', ContentFile(base64.b64decode(imgstr)), save=False)
         hoja.firmado = True
         hoja.fecha_firma = timezone.now()
@@ -134,7 +242,7 @@ def firmar_hoja(request, pk):
     return JsonResponse({'ok': False, 'error': 'No se recibio firma'})
 
 
-# ─── IMPORTACION MASIVA EXCEL ────────────────────────────────
+# ========== 11. IMPORTAR EXCEL ==========
 
 @staff_member_required
 def importar_equipos_excel(request):
@@ -143,36 +251,27 @@ def importar_equipos_excel(request):
         if not archivo:
             messages.error(request, 'No se selecciono archivo')
             return redirect('admin:inventario_equipo_changelist')
-
         wb = openpyxl.load_workbook(archivo)
         ws = wb.active
         creados = 0
         errores = []
-
         for idx, row in enumerate(ws.iter_rows(min_row=2, values_only=True), start=2):
             try:
                 nombre, marca, modelo, serial = row[0], row[1], row[2], row[3]
                 if not serial:
                     continue
-                Equipo.objects.create(
-                    nombre=nombre or 'Sin nombre',
-                    marca=marca or '',
-                    modelo=modelo or '',
-                    serial=str(serial)
-                )
+                Equipo.objects.create(nombre=nombre or 'Sin nombre', marca=marca or '', modelo=modelo or '', serial=str(serial))
                 creados += 1
             except Exception as e:
                 errores.append(f"Fila {idx}: {str(e)}")
-
-        messages.success(request, f'{creados} equipos importados correctamente.')
+        messages.success(request, f'{creados} equipos importados.')
         if errores:
-            messages.warning(request, f'Errores en {len(errores)} filas. Primeros: {", ".join(errores[:3])}')
+            messages.warning(request, f'Errores: {", ".join(errores[:3])}')
         return redirect('admin:inventario_equipo_changelist')
-
     return render(request, 'admin/importar_equipos.html')
 
 
-# ─── VERIFICAR ALERTAS ───────────────────────────────────────
+# ========== 12. ALERTAS ==========
 
 @staff_member_required
 def verificar_alertas(request):
@@ -180,59 +279,26 @@ def verificar_alertas(request):
     creadas = 0
     from datetime import timedelta
 
-    # Garantias por vencer (30 dias)
-    for eq in Equipo.objects.filter(
-        fecha_fin_garantia__lte=hoy + timedelta(days=30),
-        fecha_fin_garantia__gte=hoy,
-        estado__in=['disponible', 'asignado']
-    ):
-        alerta, c = Alerta.objects.get_or_create(
-            tipo='garantia',
-            equipo=eq,
-            defaults={
-                'titulo': f'Garantia por vencer: {eq}',
-                'mensaje': f'La garantia del equipo {eq} vence el {eq.fecha_fin_garantia}.'
-            }
-        )
-        if c:
-            creadas += 1
+    for eq in Equipo.objects.filter(fecha_fin_garantia__lte=hoy+timedelta(days=30), fecha_fin_garantia__gte=hoy, estado__in=['disponible','asignado']):
+        _, c = Alerta.objects.get_or_create(tipo='garantia', equipo=eq, defaults={'titulo':f'Garantia por vencer: {eq}','mensaje':f'La garantia del equipo {eq} vence el {eq.fecha_fin_garantia}.'})
+        if c: creadas += 1
 
-    # Stock bajo
     for acc in Accesorio.objects.all():
         if acc.stock_bajo():
-            alerta, c = Alerta.objects.get_or_create(
-                tipo='stock',
-                accesorio=acc,
-                defaults={
-                    'titulo': f'Stock bajo: {acc.nombre}',
-                    'mensaje': f'El accesorio {acc.nombre} tiene {acc.cantidad} unidades (minimo {acc.stock_minimo}).'
-                }
-            )
-            if c:
-                creadas += 1
+            _, c = Alerta.objects.get_or_create(tipo='stock', accesorio=acc, defaults={'titulo':f'Stock bajo: {acc.nombre}','mensaje':f'El accesorio {acc.nombre} tiene {acc.cantidad} unidades (minimo {acc.stock_minimo}).'})
+            if c: creadas += 1
 
-    # Revisiones pendientes
     hace_un_ano = hoy - timedelta(days=365)
     for asig in Asignacion.objects.filter(activa=True):
         fecha_asig = asig.fecha_asignacion.date() if hasattr(asig.fecha_asignacion, 'date') else asig.fecha_asignacion
         if fecha_asig <= hace_un_ano:
             if not asig.ultima_revision or asig.ultima_revision < hace_un_ano:
-                alerta, c = Alerta.objects.get_or_create(
-                    tipo='revision',
-                    equipo=asig.equipo,
-                    defaults={
-                        'titulo': f'Revision pendiente: {asig.equipo}',
-                        'mensaje': f'El equipo {asig.equipo} asignado a {asig.cliente} lleva mas de 1 ano sin revision.'
-                    }
-                )
-                if c:
-                    creadas += 1
+                _, c = Alerta.objects.get_or_create(tipo='revision', equipo=asig.equipo, defaults={'titulo':f'Revision pendiente: {asig.equipo}','mensaje':f'El equipo {asig.equipo} asignado a {asig.cliente} lleva mas de 1 ano sin revision.'})
+                if c: creadas += 1
 
     messages.success(request, f'Se verificaron alertas. {creadas} nuevas creadas.')
     return redirect('dashboard')
 
-
-# ─── MARCAR ALERTA LEIDA ─────────────────────────────────────
 
 @require_POST
 def marcar_alerta_leida(request, pk):

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4" style="max-width: 600px;">
+  <h2>📸 Subir Evidencia Fotografica</h2>
+  <p class="text-muted">Sube fotos del estado del equipo antes de entregar o al recibirlo.</p>
+
+  <form method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <div class="mb-3">
+      <label class="form-label">Equipo</label>
+      <select name="equipo" class="form-select" required>
+        <option value="">Selecciona...</option>
+        {% for eq in equipos %}
+        <option value="{{ eq.id }}">{{ eq }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Tipo de evidencia</label>
+      <select name="tipo" class="form-select" required>
+        <option value="asignacion">Entrega/Asignacion</option>
+        <option value="devolucion">Devolucion</option>
+        <option value="reparacion">Reparacion</option>
+        <option value="general">General</option>
+      </select>
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Descripcion</label>
+      <input type="text" name="descripcion" class="form-control" placeholder="Ej: Estado inicial al entregar">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Foto</label>
+      <input type="file" name="imagen" class="form-control" accept="image/*" required>
+    </div>
+    <button type="submit" class="btn btn-primary">Subir Evidencia</button>
+  </form>
+</div>
+{% endblock %}
