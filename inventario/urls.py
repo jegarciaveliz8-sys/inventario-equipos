@@ -9,6 +9,7 @@ urlpatterns = [
     path('buscar/', views.busqueda_global, name='busqueda_global'),
     path('reportes/equipos/', views.reporte_equipos, name='reporte_equipos'),
     path('evidencia/subir/', views.subir_evidencia, name='subir_evidencia'),
+    path('metricas/', views.metricas_avanzadas, name='metricas'),
     path('hojas/<int:pk>/', views.pagina_firma, name='pagina_firma'),
     path('hojas/<int:pk>/pdf/', views.generar_pdf_hoja, name='generar_pdf_hoja'),
     path('hojas/<int:pk>/firmar/', views.firmar_hoja, name='firmar_hoja'),

@@ -6,25 +6,18 @@ from django.contrib import messages
 from simple_history.admin import SimpleHistoryAdmin
 from .models import (
     Equipo, Cliente, Accesorio, Asignacion, CambioReparacion,
-    HojaResponsabilidad, Alerta, Evidencia, Notificacion,
-    Sucursal, MantenimientoPreventivo
+    HojaResponsabilidad, Alerta, Evidencia, Notificacion
 )
-
-
-@admin.register(Sucursal)
-class SucursalAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'direccion', 'encargado', 'activa']
-    search_fields = ['nombre', 'direccion']
 
 
 @admin.register(Equipo)
 class EquipoAdmin(SimpleHistoryAdmin):
-    list_display = ['nombre', 'serial', 'marca', 'estado_coloreado', 'sucursal', 'fecha_registro', 'acciones_estado']
-    list_filter = ['estado', 'marca', 'sucursal', 'fecha_registro']
+    list_display = ['nombre', 'serial', 'marca', 'estado_coloreado', 'fecha_registro', 'acciones_estado']
+    list_filter = ['estado', 'marca', 'fecha_registro']
     search_fields = ['nombre', 'serial', 'marca', 'modelo']
     readonly_fields = ['uuid', 'qr_preview', 'fecha_registro', 'estado']
     fieldsets = (
-        (None, {'fields': ('uuid', 'nombre', 'marca', 'modelo', 'serial', 'descripcion', 'estado', 'sucursal')}),
+        (None, {'fields': ('uuid', 'nombre', 'marca', 'modelo', 'serial', 'descripcion', 'estado')}),
         ('Detalles', {'fields': ('fecha_fin_garantia', 'foto', 'qr_preview')}),
         ('Auditoria', {'fields': ('fecha_registro',)}),
     )
@@ -136,11 +129,4 @@ class EvidenciaAdmin(admin.ModelAdmin):
 class NotificacionAdmin(admin.ModelAdmin):
     list_display = ['asunto', 'destinatario', 'enviado', 'fecha_creacion']
     list_filter = ['enviado', 'tipo']
-    readonly_fields = ['uuid']
-
-
-@admin.register(MantenimientoPreventivo)
-class MantenimientoPreventivoAdmin(SimpleHistoryAdmin):
-    list_display = ['equipo', 'tipo', 'frecuencia_meses', 'proxima_fecha', 'completado']
-    list_filter = ['tipo', 'completado']
     readonly_fields = ['uuid']

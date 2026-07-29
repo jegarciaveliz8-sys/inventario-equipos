@@ -306,3 +306,45 @@ def marcar_alerta_leida(request, pk):
     alerta.leida = True
     alerta.save()
     return JsonResponse({'ok': True})
+
+
+# ========== METRICAS AVANZADAS ==========
+
+@staff_member_required
+def metricas_avanzadas(request):
+    from django.db.models import Avg, Count, F
+    from django.db.models.functions import ExtractMonth
+
+    # Tiempo promedio de reparacion
+    reparaciones = CambioReparacion.objects.all()
+    total_reparaciones = reparaciones.count()
+
+    # Equipos que mas fallan (top 5)
+    equipos_fallas = Equipo.objects.annotate(
+        num_fallas=Count('cambios')
+    ).filter(num_fallas__gt=0).order_by('-num_fallas')[:5]
+
+    # Clientes con mas equipos asignados
+    clientes_top = Cliente.objects.annotate(
+        num_equipos=Count('asignaciones', filter=models.Q(asignaciones__activa=True))
+    ).filter(num_equipos__gt=0).order_by('-num_equipos')[:5]
+
+    # Costo total en reparaciones
+    from django.db.models import Sum
+    costo_total = reparaciones.aggregate(total=Sum('costo'))['total'] or 0
+
+    # Equipos por estado
+    por_estado = {
+        'disponible': Equipo.objects.filter(estado='disponible').count(),
+        'asignado': Equipo.objects.filter(estado='asignado').count(),
+        'en_reparacion': Equipo.objects.filter(estado='en_reparacion').count(),
+        'dado_de_baja': Equipo.objects.filter(estado='dado_de_baja').count(),
+    }
+
+    return render(request, 'inventario/metricas.html', {
+        'total_reparaciones': total_reparaciones,
+        'equipos_fallas': equipos_fallas,
+        'clientes_top': clientes_top,
+        'costo_total': costo_total,
+        'por_estado': por_estado,
+    })

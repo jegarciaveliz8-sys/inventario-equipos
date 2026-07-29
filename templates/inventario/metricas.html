@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container py-4">
+  <h2>📈 Métricas Avanzadas</h2>
+
+  <div class="row g-3 mb-4">
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h3>Q{{ costo_total }}</h3><small>Costo Total Reparaciones</small></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h3>{{ total_reparaciones }}</h3><small>Total Reparaciones</small></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h3>{{ por_estado.disponibles }}</h3><small>Disponibles</small></div></div></div>
+    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h3>{{ por_estado.asignados }}</h3><small>Asignados</small></div></div></div>
+  </div>
+
+  <div class="row">
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header"><strong>🔧 Equipos que más fallan</strong></div>
+        <ul class="list-group list-group-flush">
+          {% for eq in equipos_fallas %}
+          <li class="list-group-item d-flex justify-content-between">{{ eq }} <span class="badge bg-danger">{{ eq.num_fallas }} fallas</span></li>
+          {% empty %}<li class="list-group-item text-muted">Sin datos</li>{% endfor %}
+        </ul>
+      </div>
+    </div>
+    <div class="col-md-6">
+      <div class="card">
+        <div class="card-header"><strong>👤 Clientes con más equipos</strong></div>
+        <ul class="list-group list-group-flush">
+          {% for c in clientes_top %}
+          <li class="list-group-item d-flex justify-content-between">{{ c }} <span class="badge bg-primary">{{ c.num_equipos }} equipos</span></li>
+          {% empty %}<li class="list-group-item text-muted">Sin datos</li>{% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}

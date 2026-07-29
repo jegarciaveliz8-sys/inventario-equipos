@@ -16,24 +16,6 @@ def path_pdf(instance, filename):
     return f"hojas/{uuid.uuid4()}.png"
 
 
-class Sucursal(models.Model):
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    nombre = models.CharField(max_length=200)
-    direccion = models.TextField(blank=True)
-    telefono = models.CharField(max_length=20, blank=True)
-    encargado = models.CharField(max_length=200, blank=True)
-    activa = models.BooleanField(default=True)
-    fecha_registro = models.DateTimeField(auto_now_add=True)
-
-    class Meta:
-        ordering = ['nombre']
-        verbose_name = 'Sucursal'
-        verbose_name_plural = 'Sucursales'
-
-    def __str__(self):
-        return self.nombre
-
-
 class Equipo(models.Model):
     ESTADOS = [
         ('disponible', 'Disponible'),
@@ -48,7 +30,6 @@ class Equipo(models.Model):
     serial = models.CharField(max_length=100, unique=True)
     descripcion = models.TextField(blank=True)
     estado = FSMField(default='disponible', choices=ESTADOS, protected=True)
-    sucursal = models.ForeignKey(Sucursal, on_delete=models.SET_NULL, blank=True, null=True, related_name='equipos')
     fecha_registro = models.DateTimeField(auto_now_add=True)
     fecha_fin_garantia = models.DateField(blank=True, null=True)
     foto = models.ImageField(upload_to='equipos/', blank=True, null=True)
@@ -276,30 +257,3 @@ class Notificacion(models.Model):
 
     def __str__(self):
         return self.asunto
-
-
-class MantenimientoPreventivo(models.Model):
-    TIPOS = [
-        ('limpieza', 'Limpieza general'),
-        ('revision_software', 'Revision de software'),
-        ('cambio_pasta', 'Cambio de pasta termica'),
-        ('revision_bateria', 'Revision de bateria'),
-        ('actualizacion_so', 'Actualizacion de sistema operativo'),
-    ]
-    uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    equipo = models.ForeignKey(Equipo, on_delete=models.CASCADE, related_name='mantenimientos')
-    tipo = models.CharField(max_length=30, choices=TIPOS)
-    frecuencia_meses = models.PositiveIntegerField(default=6)
-    ultima_fecha = models.DateField(blank=True, null=True)
-    proxima_fecha = models.DateField(blank=True, null=True)
-    completado = models.BooleanField(default=False)
-    observaciones = models.TextField(blank=True)
-    history = HistoricalRecords()
-
-    class Meta:
-        ordering = ['proxima_fecha']
-        verbose_name = 'Mantenimiento Preventivo'
-        verbose_name_plural = 'Mantenimientos Preventivos'
-
-    def __str__(self):
-        return f"{self.get_tipo_display()} - {self.equipo}"
