@@ -139,3 +139,69 @@ class SubirEvidenciaAPIView(APIView):
                 {'error': str(e)},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
+
+
+from rest_framework.decorators import api_view
+
+
+class ReporteEvidenciasAPIView(APIView):
+    """
+    GET /api/evidencias/reporte/?equipo=TEST001
+    Devuelve todas las evidencias de un equipo con URLs de Cloudinary
+    """
+    def get(self, request, *args, **kwargs):
+        equipo_id = request.query_params.get('equipo')
+
+        if not equipo_id:
+            return Response(
+                {'error': 'Debes enviar el parametro ?equipo=ID o SERIAL'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Buscar equipo: primero por serial, luego por id
+        equipo = None
+        try:
+            equipo = Equipo.objects.get(serial=equipo_id)
+        except Equipo.DoesNotExist:
+            try:
+                equipo_id_num = int(equipo_id)
+                equipo = Equipo.objects.get(id=equipo_id_num)
+            except (ValueError, Equipo.DoesNotExist):
+                pass
+
+        if not equipo:
+            return Response(
+                {'error': f'No existe equipo con ID o Serial: {equipo_id}'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Obtener evidencias del equipo
+        evidencias = Evidencia.objects.filter(equipo=equipo).order_by('-fecha')
+
+        # Construir el reporte
+        reporte = {
+            'equipo': {
+                'id': equipo.id,
+                'uuid': str(equipo.uuid),
+                'nombre': equipo.nombre,
+                'marca': equipo.marca,
+                'modelo': equipo.modelo,
+                'serial': equipo.serial,
+                'estado': equipo.estado,
+            },
+            'total_evidencias': evidencias.count(),
+            'evidencias': []
+        }
+
+        for ev in evidencias:
+            reporte['evidencias'].append({
+                'evidencia_id': str(ev.uuid),
+                'tipo': ev.get_tipo_display(),
+                'descripcion': ev.descripcion,
+                'fecha': ev.fecha.strftime('%d/%m/%Y %H:%M'),
+                'url_cloudinary': ev.url_cloudinary,
+                'url_imagen_local': request.build_absolute_uri(ev.imagen.url) if ev.imagen else None,
+                'subido_por': ev.subido_por.username if ev.subido_por else 'Anonimo'
+            })
+
+        return Response(reporte, status=status.HTTP_200_OK)

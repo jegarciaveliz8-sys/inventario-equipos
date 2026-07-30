@@ -5,7 +5,7 @@ from .api_views import (
     AsignacionViewSet, CambioReparacionViewSet,
     HojaResponsabilidadViewSet, AlertaViewSet,
     EvidenciaViewSet, NotificacionViewSet,
-    SubirEvidenciaAPIView
+    SubirEvidenciaAPIView, ReporteEvidenciasAPIView
 )
 
 router = DefaultRouter()
@@ -19,8 +19,8 @@ router.register(r'alertas', AlertaViewSet)
 router.register(r'evidencias', EvidenciaViewSet)
 router.register(r'notificaciones', NotificacionViewSet)
 
-# IMPORTANTE: rutas manuales ANTES del router para que no sean capturadas por <pk>
 urlpatterns = [
     path('evidencias/subir/', SubirEvidenciaAPIView.as_view(), name='subir_evidencia'),
+    path('evidencias/reporte/', ReporteEvidenciasAPIView.as_view(), name='reporte_evidencias'),
     path('', include(router.urls)),
 ]
