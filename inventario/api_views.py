@@ -56,3 +56,38 @@ class EvidenciaViewSet(viewsets.ModelViewSet):
 class NotificacionViewSet(viewsets.ModelViewSet):
     queryset = Notificacion.objects.all()
     serializer_class = NotificacionSerializer
+
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser, FormParser
+from .utils.cloudinary_upload import subir_evidencia
+
+
+class SubirEvidenciaAPIView(APIView):
+    parser_classes = [MultiPartParser, FormParser]
+
+    def post(self, request, *args, **kwargs):
+        foto = request.FILES.get('foto')
+        equipo_id = request.data.get('equipoId', 'equipo')
+
+        if not foto:
+            return Response(
+                {'error': 'No se envio ninguna foto'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        try:
+            url = subir_evidencia(foto, equipo_id)
+            
+            return Response({
+                'success': True,
+                'url': url,
+                'mensaje': 'Evidencia guardada correctamente'
+            }, status=status.HTTP_201_CREATED)
+
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
