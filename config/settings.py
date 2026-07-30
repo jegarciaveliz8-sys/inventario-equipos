@@ -94,10 +94,7 @@ CRISPY_TEMPLATE_PACK = "bootstrap5"
 
 REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],
-    'DEFAULT_FILTER_BACKENDS': ['django_filters.rest_framework.DjangoFilterBackend'],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-    'PAGE_SIZE': 20,
 }
 
 SPECTACULAR_SETTINGS = {
@@ -105,6 +102,7 @@ SPECTACULAR_SETTINGS = {
     'DESCRIPTION': 'API para gestion de inventario de equipos tecnologicos',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
+    'COMPONENT_SPLIT_REQUEST': False,
 }
 
 LOGIN_URL = '/admin/login/'

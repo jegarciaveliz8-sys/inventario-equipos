@@ -7,14 +7,14 @@ from .api_views import (
 )
 
 router = DefaultRouter()
-router.register(r'equipos', EquipoViewSet, basename='api-equipos')
-router.register(r'clientes', ClienteViewSet, basename='api-clientes')
-router.register(r'accesorios', AccesorioViewSet, basename='api-accesorios')
-router.register(r'asignaciones', AsignacionViewSet, basename='api-asignaciones')
-router.register(r'reparaciones', CambioReparacionViewSet, basename='api-reparaciones')
-router.register(r'hojas', HojaResponsabilidadViewSet, basename='api-hojas')
-router.register(r'alertas', AlertaViewSet, basename='api-alertas')
-router.register(r'evidencias', EvidenciaViewSet, basename='api-evidencias')
-router.register(r'notificaciones', NotificacionViewSet, basename='api-notificaciones')
+router.register(r'equipos', EquipoViewSet)
+router.register(r'clientes', ClienteViewSet)
+router.register(r'accesorios', AccesorioViewSet)
+router.register(r'asignaciones', AsignacionViewSet)
+router.register(r'reparaciones', CambioReparacionViewSet)
+router.register(r'hojas', HojaResponsabilidadViewSet)
+router.register(r'alertas', AlertaViewSet)
+router.register(r'evidencias', EvidenciaViewSet)
+router.register(r'notificaciones', NotificacionViewSet)
 
 urlpatterns = router.urls
