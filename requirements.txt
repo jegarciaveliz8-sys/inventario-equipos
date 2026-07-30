@@ -13,3 +13,4 @@ python-dateutil
 gunicorn
 whitenoise
 drf-spectacular
+drf-spectacular
