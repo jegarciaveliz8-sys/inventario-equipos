@@ -12,3 +12,4 @@ crispy-bootstrap5
 python-dateutil
 gunicorn
 whitenoise
+drf-spectacular

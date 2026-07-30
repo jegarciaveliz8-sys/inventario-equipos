@@ -103,3 +103,14 @@ LOGIN_URL = '/admin/login/'
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 DEFAULT_FROM_EMAIL = 'no-reply@inventario.local'
+
+INSTALLED_APPS += ['drf_spectacular']
+
+REST_FRAMEWORK['DEFAULT_SCHEMA_CLASS'] = 'drf_spectacular.openapi.AutoSchema'
+
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'Inventario Equipos API',
+    'DESCRIPTION': 'API para gestion de inventario de equipos tecnologicos',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
