@@ -357,11 +357,6 @@ def subir_evidencia_movil(request):
     return render(request, 'inventario/subir_evidencia_movil.html')
 
 from django.shortcuts import render, get_object_or_404
-
-
-import os
-import tempfile
-import requests
 from django.http import HttpResponse
 from django.utils import timezone
 from weasyprint import HTML
@@ -369,12 +364,53 @@ from django.template.loader import render_to_string
 from .models import Equipo, Evidencia
 
 
-def reporte_evidencias_pdf(request):
+def reporte_evidencias_pdf(request, equipo_id):
     """
-    Genera un PDF profesional con el reporte de evidencias de un equipo.
-    Incluye tabla de datos, links a Cloudinary y codigo QR.
+    Genera un PDF con el reporte de evidencias de un equipo.
     Uso: /reporte/evidencias/pdf/?equipo=TEST001
     """
+    # Buscar equipo por serial o ID
+    equipo = None
+    try:
+        equipo = Equipo.objects.get(serial=equipo_id)
+    except Equipo.DoesNotExist:
+        try:
+            equipo_id_num = int(equipo_id)
+            equipo = Equipo.objects.get(id=equipo_id_num)
+        except (ValueError, Equipo.DoesNotExist):
+            return HttpResponse(f"Equipo no encontrado: {equipo_id}", status=404)
+
+    # Obtener evidencias
+    evidencias = Evidencia.objects.filter(equipo=equipo).order_by('-fecha')
+
+    # Renderizar HTML
+    html_string = render_to_string('inventario/reporte_evidencias_pdf.html', {
+        'equipo': equipo,
+        'evidencias': evidencias,
+        'total_evidencias': evidencias.count(),
+        'fecha_generacion': timezone.now(),
+    })
+
+    # Generar PDF
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
+
+    # Respuesta con PDF
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="reporte_evidencias_{equipo.serial}.pdf"'
+    return response
+
+def reporte_evidencias_pdf(request):
+    """
+    Genera un PDF con el reporte de evidencias de un equipo.
+    Uso: /reporte/evidencias/pdf/?equipo=TEST001
+    """
+    from django.shortcuts import render, get_object_or_404
+    from django.http import HttpResponse
+    from django.utils import timezone
+    from weasyprint import HTML
+    from django.template.loader import render_to_string
+    from .models import Equipo, Evidencia
+
     equipo_id = request.GET.get('equipo')
     
     if not equipo_id:
@@ -394,36 +430,162 @@ def reporte_evidencias_pdf(request):
     # Obtener evidencias
     evidencias = Evidencia.objects.filter(equipo=equipo).order_by('-fecha')
 
-    # Generar QR con link al reporte (usamos la URL de la API de reporte)
-    qr_base64 = None
-    try:
-        import qrcode
-        from io import BytesIO
-        import base64
-        
-        reporte_url = f"https://inventario-equipos-hkmd.onrender.com/api/evidencias/reporte/?equipo={equipo.serial}"
-        qr = qrcode.make(reporte_url, box_size=6, border=2)
-        buffer = BytesIO()
-        qr.save(buffer, format='PNG')
-        qr_base64 = f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode()}"
-    except Exception:
-        qr_base64 = None
-
     # Renderizar HTML
     html_string = render_to_string('inventario/reporte_evidencias_pdf.html', {
         'equipo': equipo,
         'evidencias': evidencias,
         'total_evidencias': evidencias.count(),
         'fecha_generacion': timezone.now(),
-        'qr_base64': qr_base64,
     })
 
     # Generar PDF
-    try:
-        pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
-    except Exception as e:
-        return HttpResponse(f"Error generando PDF: {e}", status=500)
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
 
+    # Respuesta con PDF
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="reporte_evidencias_{equipo.serial}.pdf"'
+    return response
+
+import base64
+from urllib.request import urlopen
+
+
+def get_image_base64(url):
+    """Descarga una imagen y la convierte a base64 para el PDF"""
+    try:
+        with urlopen(url, timeout=10) as response:
+            data = response.read()
+            mime = response.headers.get_content_type()
+            return f"data:{mime};base64,{base64.b64encode(data).decode()}"
+    except Exception:
+        return url  # Si falla, deja la URL original
+
+
+def reporte_evidencias_pdf(request):
+    """
+    Genera un PDF con el reporte de evidencias de un equipo.
+    Uso: /reporte/evidencias/pdf/?equipo=TEST001
+    """
+    from django.http import HttpResponse
+    from django.utils import timezone
+    from weasyprint import HTML
+    from django.template.loader import render_to_string
+    from .models import Equipo, Evidencia
+
+    equipo_id = request.GET.get('equipo')
+    
+    if not equipo_id:
+        return HttpResponse("Debes enviar el parametro ?equipo=ID o SERIAL", status=400)
+
+    # Buscar equipo por serial o ID
+    equipo = None
+    try:
+        equipo = Equipo.objects.get(serial=equipo_id)
+    except Equipo.DoesNotExist:
+        try:
+            equipo_id_num = int(equipo_id)
+            equipo = Equipo.objects.get(id=equipo_id_num)
+        except (ValueError, Equipo.DoesNotExist):
+            return HttpResponse(f"Equipo no encontrado: {equipo_id}", status=404)
+
+    # Obtener evidencias y convertir imagenes a base64
+    evidencias_raw = Evidencia.objects.filter(equipo=equipo).order_by('-fecha')
+    evidencias = []
+    for ev in evidencias_raw:
+        evidencias.append({
+            'tipo_display': ev.get_tipo_display(),
+            'fecha': ev.fecha,
+            'descripcion': ev.descripcion,
+            'subido_por': ev.subido_por,
+            'imagen_base64': get_image_base64(ev.url_cloudinary) if ev.url_cloudinary else None,
+            'imagen_local': ev.imagen,
+            'url_cloudinary': ev.url_cloudinary,
+        })
+
+    # Renderizar HTML
+    html_string = render_to_string('inventario/reporte_evidencias_pdf.html', {
+        'equipo': equipo,
+        'evidencias': evidencias,
+        'total_evidencias': len(evidencias),
+        'fecha_generacion': timezone.now(),
+    })
+
+    # Generar PDF
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
+
+    # Respuesta con PDF
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="reporte_evidencias_{equipo.serial}.pdf"'
+    return response
+
+import base64
+from urllib.request import urlopen
+
+
+def get_image_base64(url):
+    """Descarga una imagen y la convierte a base64 para el PDF"""
+    try:
+        with urlopen(url, timeout=10) as response:
+            data = response.read()
+            mime = response.headers.get_content_type()
+            return f"data:{mime};base64,{base64.b64encode(data).decode()}"
+    except Exception:
+        return url  # Si falla, deja la URL original
+
+
+def reporte_evidencias_pdf(request):
+    """
+    Genera un PDF con el reporte de evidencias de un equipo.
+    Uso: /reporte/evidencias/pdf/?equipo=TEST001
+    """
+    from django.http import HttpResponse
+    from django.utils import timezone
+    from weasyprint import HTML
+    from django.template.loader import render_to_string
+    from .models import Equipo, Evidencia
+
+    equipo_id = request.GET.get('equipo')
+    
+    if not equipo_id:
+        return HttpResponse("Debes enviar el parametro ?equipo=ID o SERIAL", status=400)
+
+    # Buscar equipo por serial o ID
+    equipo = None
+    try:
+        equipo = Equipo.objects.get(serial=equipo_id)
+    except Equipo.DoesNotExist:
+        try:
+            equipo_id_num = int(equipo_id)
+            equipo = Equipo.objects.get(id=equipo_id_num)
+        except (ValueError, Equipo.DoesNotExist):
+            return HttpResponse(f"Equipo no encontrado: {equipo_id}", status=404)
+
+    # Obtener evidencias y convertir imagenes a base64
+    evidencias_raw = Evidencia.objects.filter(equipo=equipo).order_by('-fecha')
+    evidencias = []
+    for ev in evidencias_raw:
+        evidencias.append({
+            'tipo_display': ev.get_tipo_display(),
+            'fecha': ev.fecha,
+            'descripcion': ev.descripcion,
+            'subido_por': ev.subido_por,
+            'imagen_base64': get_image_base64(ev.url_cloudinary) if ev.url_cloudinary else None,
+            'imagen_local': ev.imagen,
+            'url_cloudinary': ev.url_cloudinary,
+        })
+
+    # Renderizar HTML
+    html_string = render_to_string('inventario/reporte_evidencias_pdf.html', {
+        'equipo': equipo,
+        'evidencias': evidencias,
+        'total_evidencias': len(evidencias),
+        'fecha_generacion': timezone.now(),
+    })
+
+    # Generar PDF
+    pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
+
+    # Respuesta con PDF
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="reporte_evidencias_{equipo.serial}.pdf"'
     return response

@@ -21,6 +21,7 @@ drf-spectacular==0.30.0
 et_xmlfile==2.0.0
 fonttools==4.63.0
 gunicorn==26.0.0
+idna==3.18
 inflection==0.5.1
 jsonschema==4.26.0
 jsonschema-specifications==2025.9.1
@@ -37,6 +38,7 @@ PyYAML==6.0.3
 qrcode==8.2
 referencing==0.37.0
 reportlab==5.0.0
+requests==2.34.2
 rpds-py==2026.6.3
 six==1.17.0
 sqlparse==0.5.5

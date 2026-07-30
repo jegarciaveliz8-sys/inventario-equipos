@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Evidencias</title>
+    <style>
+        @page { size: A4; margin: 2cm; }
+        body { font-family: 'Helvetica', 'Arial', sans-serif; color: #333; line-height: 1.5; font-size: 12px; }
+        
+        /* Header */
+        .header { 
+            text-align: center; 
+            border-bottom: 3px solid #667eea; 
+            padding-bottom: 15px; 
+            margin-bottom: 25px; 
+        }
+        .header h1 { color: #667eea; margin: 0; font-size: 26px; }
+        .header p { color: #888; margin: 5px 0 0; font-size: 11px; }
+        
+        /* Info Box */
+        .info-box { 
+            background: #f8f9ff; 
+            border-left: 4px solid #667eea; 
+            padding: 15px; 
+            margin-bottom: 25px; 
+            border-radius: 0 8px 8px 0; 
+        }
+        .info-box h2 { margin: 0 0 10px; color: #667eea; font-size: 15px; }
+        .info-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 12px; }
+        .info-row strong { color: #555; }
+        
+        /* Badge */
+        .badge { 
+            display: inline-block; 
+            padding: 2px 8px; 
+            border-radius: 10px; 
+            font-size: 10px; 
+            font-weight: bold; 
+            text-transform: uppercase; 
+        }
+        .badge-disponible { background: #d4edda; color: #155724; }
+        .badge-asignado { background: #fff3cd; color: #856404; }
+        .badge-en_reparacion { background: #f8d7da; color: #721c24; }
+        .badge-dado_de_baja { background: #e2e3e5; color: #383d41; }
+        
+        /* Total Box */
+        .total-box { 
+            text-align: center; 
+            background: #667eea; 
+            color: white; 
+            padding: 12px; 
+            border-radius: 8px; 
+            margin: 15px 0 25px; 
+        }
+        .total-box h3 { margin: 0; font-size: 13px; }
+        
+        /* Table */
+        .evidencias-title { 
+            font-size: 16px; 
+            color: #333; 
+            margin: 25px 0 12px; 
+            border-bottom: 2px solid #eee; 
+            padding-bottom: 6px; 
+        }
+        table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            margin-bottom: 20px; 
+            font-size: 11px; 
+        }
+        th { 
+            background: #667eea; 
+            color: white; 
+            padding: 10px 8px; 
+            text-align: left; 
+            font-weight: 600; 
+        }
+        td { 
+            padding: 10px 8px; 
+            border-bottom: 1px solid #e0e0e0; 
+            vertical-align: top; 
+        }
+        tr:nth-child(even) { background: #f8f9ff; }
+        tr:hover { background: #eef0ff; }
+        
+        /* Links */
+        .link-btn {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 10px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-size: 10px;
+            font-weight: bold;
+        }
+        .url-text {
+            font-size: 8px;
+            color: #999;
+            word-break: break-all;
+            margin-top: 3px;
+        }
+        
+        /* QR Section */
+        .qr-section {
+            text-align: center;
+            margin-top: 30px;
+            padding: 20px;
+            border: 2px dashed #667eea;
+            border-radius: 10px;
+            page-break-inside: avoid;
+        }
+        .qr-section h3 {
+            color: #667eea;
+            margin: 0 0 10px;
+            font-size: 14px;
+        }
+        .qr-section p {
+            color: #888;
+            font-size: 11px;
+            margin: 5px 0;
+        }
+        .qr-img {
+            width: 120px;
+            height: 120px;
+            margin: 10px auto;
+        }
+        
+        /* Footer */
+        .footer { 
+            margin-top: 30px; 
+            text-align: center; 
+            font-size: 9px; 
+            color: #aaa; 
+            border-top: 1px solid #eee; 
+            padding-top: 12px; 
+        }
+        
+        /* Sin evidencias */
+        .sin-evidencias { 
+            text-align: center; 
+            color: #888; 
+            padding: 30px; 
+            font-style: italic; 
+            background: #f5f5f5;
+            border-radius: 8px;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>📸 Reporte de Evidencias</h1>
+        <p>Generado el {{ fecha_generacion|date:"d/m/Y H:i" }} | Sistema de Inventario de Equipos</p>
+    </div>
+
+    <div class="info-box">
+        <h2>📋 Informacion del Equipo</h2>
+        <div class="info-row">
+            <span><strong>Nombre:</strong> {{ equipo.nombre }}</span>
+            <span><strong>Serial:</strong> {{ equipo.serial }}</span>
+        </div>
+        <div class="info-row">
+            <span><strong>Marca:</strong> {{ equipo.marca|default:"-" }}</span>
+            <span><strong>Modelo:</strong> {{ equipo.modelo|default:"-" }}</span>
+        </div>
+        <div class="info-row">
+            <span>
+                <strong>Estado:</strong> 
+                <span class="badge badge-{{ equipo.estado }}">
+                    {{ equipo.get_estado_display }}
+                </span>
+            </span>
+            <span><strong>Registrado:</strong> {{ equipo.fecha_registro|date:"d/m/Y" }}</span>
+        </div>
+        {% if equipo.descripcion %}
+        <div class="info-row" style="margin-top:6px;">
+            <span><strong>Descripcion:</strong> {{ equipo.descripcion }}</span>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="total-box">
+        <h3>Total de Evidencias Registradas: {{ total_evidencias }}</h3>
+    </div>
+
+    <h2 class="evidencias-title">📷 Listado de Evidencias</h2>
+
+    {% if evidencias %}
+    <table>
+        <thead>
+            <tr>
+                <th style="width:5%">#</th>
+                <th style="width:15%">Tipo</th>
+                <th style="width:20%">Fecha</th>
+                <th style="width:30%">Descripcion</th>
+                <th style="width:15%">Subido por</th>
+                <th style="width:15%">Accion</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ev in evidencias %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td><strong>{{ ev.get_tipo_display }}</strong></td>
+                <td>{{ ev.fecha|date:"d/m/Y H:i" }}</td>
+                <td>{{ ev.descripcion|default:"Sin descripcion" }}</td>
+                <td>{{ ev.subido_por.username|default:"Anonimo" }}</td>
+                <td>
+                    {% if ev.url_cloudinary %}
+                        <a href="{{ ev.url_cloudinary }}" class="link-btn" target="_blank">Ver Foto</a>
+                        <div class="url-text">{{ ev.url_cloudinary|truncatechars:40 }}</div>
+                    {% elif ev.imagen %}
+                        <a href="http://localhost:8000{{ ev.imagen.url }}" class="link-btn" target="_blank">Ver Foto</a>
+                    {% else %}
+                        <span style="color:#999;">Sin foto</span>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="sin-evidencias">
+        No se han registrado evidencias para este equipo.
+    </div>
+    {% endif %}
+
+    {% if qr_base64 %}
+    <div class="qr-section">
+        <h3>📱 Escanea para ver el reporte completo</h3>
+        <img src="{{ qr_base64 }}" class="qr-img" alt="QR">
+        <p>Escanee este codigo con su celular para ver el reporte interactivo</p>
+        <p style="font-size:9px; color:#bbb;">O visite: /api/evidencias/reporte/?equipo={{ equipo.serial }}</p>
+    </div>
+    {% endif %}
+
+    <div class="footer">
+        Documento generado automaticamente por el Sistema de Inventario de Equipos.<br>
+        Las imagenes estan almacenadas en Cloudinary. Este PDF contiene links directos a las fotos originales.<br>
+        {{ fecha_generacion|date:"Y" }} | Todos los derechos reservados.
+    </div>
+
+</body>
+</html>

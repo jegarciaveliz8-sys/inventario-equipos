@@ -357,11 +357,99 @@ def subir_evidencia_movil(request):
     return render(request, 'inventario/subir_evidencia_movil.html')
 
 from django.shortcuts import render, get_object_or_404
+from django.http import HttpResponse
+from django.utils import timezone
+from weasyprint import HTML
+from django.template.loader import render_to_string
+from .models import Equipo, Evidencia
 
+
+import base64
+import requests
+
+
+
+
+
+    equipo_id = request.GET.get('equipo')
+    
+    if not equipo_id:
+        return HttpResponse("Debes enviar el parametro ?equipo=ID o SERIAL", status=400)
+
+    # Buscar equipo por serial o ID
+    equipo = None
+    try:
+        equipo = Equipo.objects.get(serial=equipo_id)
+    except Equipo.DoesNotExist:
+        try:
+            equipo_id_num = int(equipo_id)
+            equipo = Equipo.objects.get(id=equipo_id_num)
+        except (ValueError, Equipo.DoesNotExist):
+            return HttpResponse(f"Equipo no encontrado: {equipo_id}", status=404)
+
+    # Crear directorio temporal para imagenes
+    temp_dir = tempfile.mkdtemp(prefix='evidencias_')
+    
+    # Obtener evidencias y descargar imagenes a archivos temporales
+    evidencias_raw = Evidencia.objects.filter(equipo=equipo).order_by('-fecha')
+    evidencias = []
+    
+    for idx, ev in enumerate(evidencias_raw):
+        img_path = None
+        if ev.url_cloudinary:
+            try:
+                response = requests.get(ev.url_cloudinary, timeout=15)
+                response.raise_for_status()
+                ext = response.headers.get('content-type', 'image/jpeg').split('/')[-1]
+                if ext not in ['jpeg', 'jpg', 'png', 'gif', 'webp']:
+                    ext = 'jpg'
+                img_filename = f'evidencia_{idx}.{ext}'
+                img_path = os.path.join(temp_dir, img_filename)
+                with open(img_path, 'wb') as img_file:
+                    img_file.write(response.content)
+            except Exception as e:
+                print(f"Error descargando imagen: {e}")
+                img_path = None
+        
+        evidencias.append({
+            'tipo_display': ev.get_tipo_display(),
+            'fecha': ev.fecha,
+            'descripcion': ev.descripcion,
+            'subido_por': ev.subido_por,
+            'imagen_path': img_path,  # Ruta local del archivo temporal
+            'url_cloudinary': ev.url_cloudinary,
+        })
+
+    # Renderizar HTML
+    html_string = render_to_string('inventario/reporte_evidencias_pdf.html', {
+        'equipo': equipo,
+        'evidencias': evidencias,
+        'total_evidencias': len(evidencias),
+        'fecha_generacion': timezone.now(),
+    })
+
+    # Generar PDF
+    try:
+        pdf_file = HTML(
+            string=html_string,
+            base_url=f'file://{temp_dir}/'
+        ).write_pdf()
+    except Exception as e:
+        return HttpResponse(f"Error generando PDF: {e}", status=500)
+
+    # Limpiar archivos temporales (opcional, descomenta si quieres)
+    # import shutil
+    # shutil.rmtree(temp_dir)
+
+    # Respuesta con PDF
+    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response['Content-Disposition'] = f'inline; filename="reporte_evidencias_{equipo.serial}.pdf"'
+    return response
 
 import os
 import tempfile
 import requests
+import base64
 from django.http import HttpResponse
 from django.utils import timezone
 from weasyprint import HTML
@@ -371,8 +459,7 @@ from .models import Equipo, Evidencia
 
 def reporte_evidencias_pdf(request):
     """
-    Genera un PDF profesional con el reporte de evidencias de un equipo.
-    Incluye tabla de datos, links a Cloudinary y codigo QR.
+    Genera un PDF con el reporte de evidencias de un equipo.
     Uso: /reporte/evidencias/pdf/?equipo=TEST001
     """
     equipo_id = request.GET.get('equipo')
@@ -391,38 +478,60 @@ def reporte_evidencias_pdf(request):
         except (ValueError, Equipo.DoesNotExist):
             return HttpResponse(f"Equipo no encontrado: {equipo_id}", status=404)
 
-    # Obtener evidencias
-    evidencias = Evidencia.objects.filter(equipo=equipo).order_by('-fecha')
-
-    # Generar QR con link al reporte (usamos la URL de la API de reporte)
-    qr_base64 = None
-    try:
-        import qrcode
-        from io import BytesIO
-        import base64
+    # Crear directorio temporal
+    temp_dir = tempfile.mkdtemp(prefix='reporte_')
+    
+    # Descargar imagenes como archivos locales
+    evidencias_raw = Evidencia.objects.filter(equipo=equipo).order_by('-fecha')
+    evidencias = []
+    
+    for idx, ev in enumerate(evidencias_raw):
+        img_filename = None
+        if ev.url_cloudinary:
+            try:
+                response = requests.get(ev.url_cloudinary, timeout=15)
+                response.raise_for_status()
+                ext = response.headers.get('content-type', 'image/jpeg').split('/')[-1]
+                if ext not in ['jpeg', 'jpg', 'png', 'gif', 'webp']:
+                    ext = 'jpg'
+                img_filename = f'img_{idx}.{ext}'
+                img_path = os.path.join(temp_dir, img_filename)
+                with open(img_path, 'wb') as f:
+                    f.write(response.content)
+            except Exception as e:
+                print(f"Error descargando: {e}")
+                img_filename = None
         
-        reporte_url = f"https://inventario-equipos-hkmd.onrender.com/api/evidencias/reporte/?equipo={equipo.serial}"
-        qr = qrcode.make(reporte_url, box_size=6, border=2)
-        buffer = BytesIO()
-        qr.save(buffer, format='PNG')
-        qr_base64 = f"data:image/png;base64,{base64.b64encode(buffer.getvalue()).decode()}"
-    except Exception:
-        qr_base64 = None
+        evidencias.append({
+            'tipo_display': ev.get_tipo_display(),
+            'fecha': ev.fecha,
+            'descripcion': ev.descripcion,
+            'subido_por': ev.subido_por,
+            'img_filename': img_filename,
+            'url_cloudinary': ev.url_cloudinary,
+        })
 
-    # Renderizar HTML
+    # Guardar HTML en archivo temporal
     html_string = render_to_string('inventario/reporte_evidencias_pdf.html', {
         'equipo': equipo,
         'evidencias': evidencias,
-        'total_evidencias': evidencias.count(),
+        'total_evidencias': len(evidencias),
         'fecha_generacion': timezone.now(),
-        'qr_base64': qr_base64,
     })
+    
+    html_path = os.path.join(temp_dir, 'reporte.html')
+    with open(html_path, 'w', encoding='utf-8') as f:
+        f.write(html_string)
 
-    # Generar PDF
+    # Generar PDF desde archivo (mas robusto)
     try:
-        pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
+        pdf_file = HTML(filename=html_path, base_url=f'file://{temp_dir}/').write_pdf()
     except Exception as e:
         return HttpResponse(f"Error generando PDF: {e}", status=500)
+
+    # Limpiar (opcional)
+    # import shutil
+    # shutil.rmtree(temp_dir)
 
     response = HttpResponse(pdf_file, content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="reporte_evidencias_{equipo.serial}.pdf"'
