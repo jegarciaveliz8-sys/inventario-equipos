@@ -326,7 +326,7 @@ def metricas_avanzadas(request):
 
     # Clientes con mas equipos asignados
     clientes_top = Cliente.objects.annotate(
-        num_equipos=Count('asignaciones', filter=models.Q(asignaciones__activa=True))
+        num_equipos=Count('asignaciones', filter=Q(asignaciones__activa=True))
     ).filter(num_equipos__gt=0).order_by('-num_equipos')[:5]
 
     # Costo total en reparaciones
