@@ -1,5 +1,6 @@
 import json
 import openpyxl
+from xhtml2pdf import pisa
 from io import BytesIO
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse, HttpResponse
@@ -11,7 +12,7 @@ from django.utils import timezone
 from django.db.models import Count, Q
 from django.template.loader import render_to_string
 from dateutil.relativedelta import relativedelta
-from weasyprint import HTML
+# from xhtml2pdf import pisa  # Reemplazado por xhtml2pdf
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import (
@@ -155,9 +156,10 @@ def reporte_equipos(request):
     # Exportar a PDF
     if request.GET.get('exportar') == 'pdf':
         html_string = render_to_string('reportes/reporte_equipos.html', {'equipos': equipos, 'filtros': request.GET})
-        html = HTML(string=html_string, base_url=request.build_absolute_uri())
         pdf_buffer = BytesIO()
-        html.write_pdf(pdf_buffer)
+        pisa_status = pisa.CreatePDF(html_string, dest=pdf_buffer)
+        if pisa_status.err:
+            return HttpResponse("Error generando PDF", status=500)
         pdf_buffer.seek(0)
         response = HttpResponse(pdf_buffer, content_type='application/pdf')
         response['Content-Disposition'] = 'attachment; filename=reporte_equipos.pdf'
@@ -206,9 +208,10 @@ def generar_pdf_hoja(request, pk):
         'equipo': hoja.asignacion.equipo, 'cliente': hoja.asignacion.cliente,
         'fecha': timezone.now(),
     })
-    html = HTML(string=html_string, base_url=request.build_absolute_uri())
     pdf_buffer = BytesIO()
-    html.write_pdf(pdf_buffer)
+    pisa_status = pisa.CreatePDF(html_string, dest=pdf_buffer)
+    if pisa_status.err:
+        return HttpResponse("Error generando PDF", status=500)
     pdf_buffer.seek(0)
     response = HttpResponse(pdf_buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename=hoja_{hoja.asignacion.equipo.serial}.pdf'
@@ -364,7 +367,7 @@ import tempfile
 import requests
 from django.http import HttpResponse
 from django.utils import timezone
-from weasyprint import HTML
+# from xhtml2pdf import pisa  # Reemplazado por xhtml2pdf
 from django.template.loader import render_to_string
 from .models import Equipo, Evidencia
 
@@ -419,11 +422,12 @@ def reporte_evidencias_pdf(request):
     })
 
     # Generar PDF
-    try:
-        pdf_file = HTML(string=html_string, base_url=request.build_absolute_uri()).write_pdf()
-    except Exception as e:
-        return HttpResponse(f"Error generando PDF: {e}", status=500)
+    pdf_buffer = BytesIO()
+    pisa_status = pisa.CreatePDF(html_string, dest=pdf_buffer)
+    if pisa_status.err:
+        return HttpResponse("Error generando PDF", status=500)
+    pdf_buffer.seek(0)
 
-    response = HttpResponse(pdf_file, content_type='application/pdf')
+    response = HttpResponse(pdf_buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="reporte_evidencias_{equipo.serial}.pdf"'
     return response

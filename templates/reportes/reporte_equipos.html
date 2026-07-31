@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Reporte de Equipos</title>
+    <style>
+        @page {
+            size: A4 landscape;
+            margin: 2cm;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            font-size: 12px;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+        .filtros {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .filtros strong {
+            color: #495057;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+        }
+        th, td {
+            border: 1px solid #dee2e6;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #343a40;
+            color: white;
+            font-weight: bold;
+        }
+        tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .footer {
+            margin-top: 20px;
+            text-align: right;
+            font-size: 10px;
+            color: #6c757d;
+        }
+        .badge {
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: bold;
+        }
+        .estado-activo { background: #d4edda; color: #155724; }
+        .estado-inactivo { background: #f8d7da; color: #721c24; }
+        .estado-mantenimiento { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <h1>Reporte de Equipos Tecnológicos</h1>
+
+    <div class="filtros">
+        <strong>Filtros aplicados:</strong><br>
+        {% if filtros.marca %}Marca: {{ filtros.marca }}<br>{% endif %}
+        {% if filtros.estado %}Estado: {{ filtros.estado }}<br>{% endif %}
+        {% if filtros.fecha_desde %}Desde: {{ filtros.fecha_desde }}<br>{% endif %}
+        {% if filtros.fecha_hasta %}Hasta: {{ filtros.fecha_hasta }}<br>{% endif %}
+        {% if not filtros.marca and not filtros.estado and not filtros.fecha_desde and not filtros.fecha_hasta %}
+            Ningún filtro aplicado (todos los registros)
+        {% endif %}
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>Nombre</th>
+                <th>Marca</th>
+                <th>Modelo</th>
+                <th>Serie</th>
+                <th>Estado</th>
+                <th>Ubicación</th>
+                <th>Fecha de adquisición</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for equipo in equipos %}
+            <tr>
+                <td>{{ forloop.counter }}</td>
+                <td>{{ equipo.nombre|default:"—" }}</td>
+                <td>{{ equipo.marca|default:"—" }}</td>
+                <td>{{ equipo.modelo|default:"—" }}</td>
+                <td>{{ equipo.numero_serie|default:"—" }}</td>
+                <td>
+                    <span class="badge estado-{{ equipo.estado|lower }}">
+                        {{ equipo.get_estado_display|default:equipo.estado|default:"—" }}
+                    </span>
+                </td>
+                <td>{{ equipo.ubicacion|default:"—" }}</td>
+                <td>{{ equipo.fecha_adquisicion|default:"—"|date:"d/m/Y" }}</td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="8" style="text-align: center; color: #6c757d;">
+                    No se encontraron equipos con los filtros seleccionados.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <div class="footer">
+        Generado el {% now "d/m/Y H:i" %} — Total de equipos: {{ equipos|length }}
+    </div>
+</body>
+</html>
