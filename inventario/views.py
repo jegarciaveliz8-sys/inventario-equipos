@@ -493,8 +493,6 @@ def reporte_evidencias_pdf(request):
     return response
 
 
-# ========== ENDPOINT TEMPORAL PARA SEED EN RENDER ==========
-
 def seed_licencias_mantenimientos_web(request):
     """Endpoint temporal para ejecutar seed en Render (plan gratuito sin shell)."""
     TOKEN_SECRETO = "renderseed2024"
