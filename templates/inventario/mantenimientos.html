@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+    <h1 class="mb-4">🔧 Mantenimientos Preventivos</h1>
+
+    <div class="row g-4">
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <strong>⏰ Vencidos ({{ vencidos|length }})</strong>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for mp in vencidos %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ mp.titulo }}</strong>
+                                    <div class="text-muted small">{{ mp.equipo }} — {{ mp.get_frecuencia_display }}</div>
+                                    <div class="text-danger small fw-bold">Vencio: {{ mp.proxima_fecha|date:"d/m/Y" }}</div>
+                                </div>
+                                <a href="{% url 'completar_mantenimiento' mp.pk %}" class="btn btn-sm btn-success">Completar</a>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-center text-muted">No hay mantenimientos vencidos 🎉</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <strong>📅 Proximos ({{ proximos|length }})</strong>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for mp in proximos %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between align-items-start">
+                                <div>
+                                    <strong>{{ mp.titulo }}</strong>
+                                    <div class="text-muted small">{{ mp.equipo }} — {{ mp.get_frecuencia_display }}</div>
+                                    <div class="text-warning small fw-bold">Programado: {{ mp.proxima_fecha|date:"d/m/Y" }}</div>
+                                </div>
+                                <a href="{% url 'completar_mantenimiento' mp.pk %}" class="btn btn-sm btn-success">Completar</a>
+                            </div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-center text-muted">No hay mantenimientos proximos 🎉</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-success">
+                <div class="card-header bg-success text-white">
+                    <strong>✅ Completados Recientes ({{ completados|length }})</strong>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for mp in completados %}
+                        <li class="list-group-item">
+                            <strong>{{ mp.titulo }}</strong>
+                            <div class="text-muted small">{{ mp.equipo }} — {{ mp.get_frecuencia_display }}</div>
+                            <div class="text-success small">Ultima: {{ mp.ultima_fecha|date:"d/m/Y" }} — Proxima: {{ mp.proxima_fecha|date:"d/m/Y"|default:"—" }}</div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-center text-muted">Sin mantenimientos completados</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

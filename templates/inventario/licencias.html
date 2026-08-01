@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="container-fluid py-4">
+    <h1 class="mb-4">🔑 Licencias de Software</h1>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                    <strong>✅ Activas ({{ activas|length }})</strong>
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0">
+                        <thead>
+                            <tr><th>Software</th><th>Equipo</th><th>Tipo</th><th>Vence</th></tr>
+                        </thead>
+                        <tbody>
+                            {% for lic in activas %}
+                            <tr>
+                                <td>{{ lic.nombre }}</td>
+                                <td>{{ lic.equipo }}</td>
+                                <td><span class="badge bg-secondary">{{ lic.get_tipo_display }}</span></td>
+                                <td>{% if lic.fecha_vencimiento %}{{ lic.fecha_vencimiento|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+                            </tr>
+                            {% empty %}
+                            <tr><td colspan="4" class="text-center text-muted">Sin licencias activas</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3">
+            <div class="card shadow-sm border-warning">
+                <div class="card-header bg-warning text-dark">
+                    <strong>⚠️ Por Vencer ({{ por_vencer|length }})</strong>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for lic in por_vencer %}
+                        <li class="list-group-item">
+                            <strong>{{ lic.nombre }}</strong>
+                            <div class="text-muted small">{{ lic.equipo }}</div>
+                            <div class="text-warning small fw-bold">{{ lic.dias_para_vencer }} dias restantes</div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-center text-muted">Ninguna por vencer 🎉</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-3">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <strong>❌ Vencidas ({{ vencidas|length }})</strong>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for lic in vencidas %}
+                        <li class="list-group-item">
+                            <strong>{{ lic.nombre }}</strong>
+                            <div class="text-muted small">{{ lic.equipo }}</div>
+                            <div class="text-danger small fw-bold">Vencio: {{ lic.fecha_vencimiento|date:"d/m/Y" }}</div>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-center text-muted">Ninguna vencida 🎉</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

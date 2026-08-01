@@ -6,18 +6,89 @@ from django.contrib import messages
 from simple_history.admin import SimpleHistoryAdmin
 from .models import (
     Equipo, Cliente, Accesorio, Asignacion, CambioReparacion,
-    HojaResponsabilidad, Alerta, Evidencia, Notificacion
+    HojaResponsabilidad, Alerta, Evidencia, Notificacion,
+    Ubicacion, Categoria, SoftwareLicencia, MantenimientoPreventivo
 )
+
+
+@admin.register(Ubicacion)
+class UbicacionAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'responsable', 'activa', 'num_equipos']
+    list_filter = ['activa']
+    search_fields = ['nombre', 'responsable']
+
+    def num_equipos(self, obj):
+        return obj.equipos.count()
+    num_equipos.short_description = 'Equipos'
+
+
+@admin.register(Categoria)
+class CategoriaAdmin(admin.ModelAdmin):
+    list_display = ['nombre', 'num_equipos']
+    search_fields = ['nombre']
+
+    def num_equipos(self, obj):
+        return obj.equipos.count()
+    num_equipos.short_description = 'Equipos'
+
+
+@admin.register(SoftwareLicencia)
+class SoftwareLicenciaAdmin(SimpleHistoryAdmin):
+    list_display = ['nombre', 'equipo', 'tipo', 'fecha_vencimiento', 'dias_para_vencer', 'activa']
+    list_filter = ['tipo', 'activa', 'fecha_vencimiento']
+    search_fields = ['nombre', 'equipo__nombre', 'equipo__serial', 'clave']
+    readonly_fields = ['uuid', 'dias_para_vencer']
+    date_hierarchy = 'fecha_vencimiento'
+
+    def dias_para_vencer(self, obj):
+        dias = obj.dias_para_vencer()
+        if dias is None:
+            return format_html('<span style="color:gray;">Sin fecha</span>')
+        if dias < 0:
+            return format_html('<span style="color:red; font-weight:bold;">Vencida ({} dias)</span>', abs(dias))
+        if dias <= 30:
+            return format_html('<span style="color:orange; font-weight:bold;">{} dias</span>', dias)
+        return format_html('<span style="color:green;">{} dias</span>', dias)
+    dias_para_vencer.short_description = 'Dias restantes'
+
+
+@admin.register(MantenimientoPreventivo)
+class MantenimientoPreventivoAdmin(SimpleHistoryAdmin):
+    list_display = ['titulo', 'equipo', 'frecuencia', 'proxima_fecha', 'completado', 'esta_vencido']
+    list_filter = ['frecuencia', 'completado', 'proxima_fecha']
+    search_fields = ['titulo', 'equipo__nombre', 'equipo__serial', 'tecnico']
+    readonly_fields = ['uuid', 'calcular_proxima_fecha']
+    date_hierarchy = 'proxima_fecha'
+    actions = ['marcar_completado']
+
+    def esta_vencido(self, obj):
+        if obj.esta_vencido():
+            return format_html('<span style="color:red; font-weight:bold;">VENCIDO</span>')
+        dias = obj.dias_para_vencer()
+        if dias is not None and dias <= 7:
+            return format_html('<span style="color:orange; font-weight:bold;">URGENTE</span>')
+        return format_html('<span style="color:green;">OK</span>')
+    esta_vencido.short_description = 'Estado'
+
+    @admin.action(description='Marcar mantenimientos seleccionados como completados')
+    def marcar_completado(self, request, queryset):
+        for mp in queryset:
+            mp.completado = True
+            mp.ultima_fecha = timezone.now().date()
+            mp.proxima_fecha = mp.calcular_proxima_fecha()
+            mp.save()
+        self.message_user(request, f'{queryset.count()} mantenimientos marcados como completados.')
 
 
 @admin.register(Equipo)
 class EquipoAdmin(SimpleHistoryAdmin):
-    list_display = ['nombre', 'serial', 'marca', 'estado_coloreado', 'fecha_registro', 'acciones_estado']
-    list_filter = ['estado', 'marca', 'fecha_registro']
+    list_display = ['nombre', 'serial', 'marca', 'categoria', 'ubicacion', 'estado_coloreado', 'fecha_registro', 'acciones_estado']
+    list_filter = ['estado', 'marca', 'categoria', 'ubicacion', 'fecha_registro']
     search_fields = ['nombre', 'serial', 'marca', 'modelo']
     readonly_fields = ['uuid', 'qr_preview', 'fecha_registro', 'estado']
     fieldsets = (
-        (None, {'fields': ('uuid', 'nombre', 'marca', 'modelo', 'serial', 'descripcion', 'estado')}),
+        (None, {'fields': ('uuid', 'nombre', 'categoria', 'marca', 'modelo', 'serial', 'descripcion', 'estado')}),
+        ('Ubicacion', {'fields': ('ubicacion',)}),
         ('Detalles', {'fields': ('fecha_fin_garantia', 'foto', 'qr_preview')}),
         ('Auditoria', {'fields': ('fecha_registro',)}),
     )
@@ -52,7 +123,7 @@ class EquipoAdmin(SimpleHistoryAdmin):
 
     def estado_coloreado(self, obj):
         colores = {'disponible':'success','asignado':'primary','en_reparacion':'warning','dado_de_baja':'secondary'}
-        return format_html('<span class="badge bg-{}">{}</span>', colores.get(obj.estado,'dark'), obj.get_estado_display())
+        return format_html('<span class="badge bg-{}" style="padding:6px 10px; font-size:12px;">{}</span>', colores.get(obj.estado,'dark'), obj.get_estado_display())
     estado_coloreado.short_description = 'Estado'
 
     def acciones_estado(self, obj):
@@ -93,8 +164,8 @@ class AccesorioAdmin(SimpleHistoryAdmin):
 
 @admin.register(Asignacion)
 class AsignacionAdmin(SimpleHistoryAdmin):
-    list_display = ['equipo', 'cliente', 'fecha_asignacion', 'activa']
-    list_filter = ['activa', 'fecha_asignacion']
+    list_display = ['equipo', 'cliente', 'ubicacion', 'fecha_asignacion', 'activa']
+    list_filter = ['activa', 'fecha_asignacion', 'ubicacion']
     search_fields = ['equipo__nombre', 'equipo__serial', 'cliente__nombre']
     readonly_fields = ['uuid']
 
@@ -118,6 +189,12 @@ class AlertaAdmin(admin.ModelAdmin):
     list_display = ['tipo', 'titulo', 'leida', 'fecha_creacion']
     list_filter = ['tipo', 'leida']
     readonly_fields = ['uuid']
+    actions = ['marcar_leidas']
+
+    @admin.action(description='Marcar alertas seleccionadas como leidas')
+    def marcar_leidas(self, request, queryset):
+        queryset.update(leida=True)
+        self.message_user(request, f'{queryset.count()} alertas marcadas como leidas.')
 
 
 @admin.register(Evidencia)

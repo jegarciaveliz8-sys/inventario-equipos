@@ -24,3 +24,11 @@ staticfiles/
 .vscode/
 .idea/
 *.swp
+__pycache__/
+*.pyc
+db.sqlite3
+.env
+venv/
+staticfiles/
+media/
+seed_*.py

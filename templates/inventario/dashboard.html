@@ -1,96 +1,263 @@
 {% extends "base.html" %}
+{% load static %}
 {% block content %}
-<div class="container py-4">
-  <h1 class="mb-4">📦 Inventario de Equipos</h1>
+<div class="container-fluid py-4">
+    <h1 class="mb-4">📊 Dashboard de Inventario</h1>
 
-  <div class="row g-3 mb-4">
-    <div class="col-md-2"><div class="card text-center"><div class="card-body"><h3>{{ total_equipos }}</h3><small>Total Equipos</small></div></div></div>
-    <div class="col-md-2"><div class="card text-center border-primary"><div class="card-body text-primary"><h3>{{ asignados }}</h3><small>Asignados</small></div></div></div>
-    <div class="col-md-2"><div class="card text-center border-warning"><div class="card-body text-warning"><h3>{{ en_reparacion }}</h3><small>En Reparacion</small></div></div></div>
-    <div class="col-md-2"><div class="card text-center border-success"><div class="card-body text-success"><h3>{{ disponibles }}</h3><small>Disponibles</small></div></div></div>
-    <div class="col-md-2"><div class="card text-center border-info"><div class="card-body text-info"><h3>{{ clientes }}</h3><small>Clientes</small></div></div></div>
-    <div class="col-md-2"><div class="card text-center border-danger"><div class="card-body text-danger"><h3>{{ hojas_pendientes }}</h3><small>Hojas Pendientes</small></div></div></div>
-  </div>
-
-  <div class="row mb-4">
-    <div class="col-md-6"><canvas id="estadosChart"></canvas></div>
-    <div class="col-md-6"><canvas id="trendChart"></canvas></div>
-  </div>
-
-  <div class="row">
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-header d-flex justify-content-between">
-          <strong>⚠️ Alertas sin leer</strong>
-          <a href="{% url 'verificar_alertas' %}" class="btn btn-sm btn-outline-primary">Verificar ahora</a>
+    <div class="row g-3 mb-4">
+        <div class="col-md-2 col-sm-4">
+            <div class="card text-white bg-primary">
+                <div class="card-body text-center">
+                    <h3 class="card-title">{{ total_equipos }}</h3>
+                    <p class="card-text">Total Equipos</p>
+                </div>
+            </div>
         </div>
-        <ul class="list-group list-group-flush">
-          {% for a in alertas %}
-          <li class="list-group-item d-flex justify-content-between">
-            <span><span class="badge bg-{% if a.tipo == 'garantia' %}warning{% elif a.tipo == 'stock' %}danger{% else %}secondary{% endif %}">{{ a.get_tipo_display }}</span> {{ a.titulo }}</span>
-            <button class="btn btn-sm btn-light" onclick="marcarLeida('{{ a.id }}', this)">✓</button>
-          </li>
-          {% empty %}
-          <li class="list-group-item text-muted">No hay alertas pendientes</li>
-          {% endfor %}
-        </ul>
-      </div>
+        <div class="col-md-2 col-sm-4">
+            <div class="card text-white bg-success">
+                <div class="card-body text-center">
+                    <h3 class="card-title">{{ disponibles }}</h3>
+                    <p class="card-text">Disponibles</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-4">
+            <div class="card text-white bg-info">
+                <div class="card-body text-center">
+                    <h3 class="card-title">{{ asignados }}</h3>
+                    <p class="card-text">Asignados</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-4">
+            <div class="card text-white bg-warning">
+                <div class="card-body text-center">
+                    <h3 class="card-title">{{ en_reparacion }}</h3>
+                    <p class="card-text">En Reparacion</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-4">
+            <div class="card text-white bg-secondary">
+                <div class="card-body text-center">
+                    <h3 class="card-title">{{ dados_baja }}</h3>
+                    <p class="card-text">Dados de Baja</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-2 col-sm-4">
+            <div class="card text-white bg-dark">
+                <div class="card-body text-center">
+                    <h3 class="card-title">Q{{ costo_total_reparaciones|default:"0" }}</h3>
+                    <p class="card-text">Costo Reparaciones</p>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-header"><strong>📉 Stock bajo</strong></div>
-        <ul class="list-group list-group-flush">
-          {% for a in stock_bajo %}
-          <li class="list-group-item d-flex justify-content-between">
-            {{ a.nombre }}
-            <span class="badge bg-danger">{{ a.cantidad }} / min {{ a.stock_minimo }}</span>
-          </li>
-          {% empty %}
-          <li class="list-group-item text-muted">Todo en orden</li>
-          {% endfor %}
-        </ul>
-      </div>
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><strong>📈 Equipos por Estado</strong></div>
+                <div class="card-body"><canvas id="chartEstados" height="200"></canvas></div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><strong>🏷️ Top Marcas</strong></div>
+                <div class="card-body"><canvas id="chartMarcas" height="200"></canvas></div>
+            </div>
+        </div>
     </div>
-  </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-warning">
+                <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+                    <strong>⚠️ Alertas Pendientes ({{ total_alertas }})</strong>
+                    <a href="{% url 'verificar_alertas' %}" class="btn btn-sm btn-outline-dark">Verificar</a>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for alerta in alertas %}
+                        <li class="list-group-item d-flex justify-content-between align-items-start">
+                            <div>
+                                <small class="badge bg-{% if alerta.tipo == 'garantia' %}danger{% elif alerta.tipo == 'stock' %}warning{% elif alerta.tipo == 'licencia' %}info{% elif alerta.tipo == 'mantenimiento' %}primary{% else %}secondary{% endif %}">{{ alerta.get_tipo_display }}</small>
+                                <div class="mt-1">{{ alerta.titulo }}</div>
+                            </div>
+                            <button class="btn btn-sm btn-outline-success" onclick="marcarLeida({{ alerta.pk }})">✓</button>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted text-center">No hay alertas pendientes 🎉</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="card shadow-sm border-danger mt-3">
+                <div class="card-header bg-danger text-white"><strong>📦 Stock Critico</strong></div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for acc in stock_bajo %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>{{ acc.nombre }}</span>
+                            <span class="badge bg-danger">{{ acc.cantidad }} / min {{ acc.stock_minimo }}</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted text-center">Todo en orden 👍</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm border-info">
+                <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
+                    <strong>🔑 Licencias por Vencer</strong>
+                    <a href="{% url 'lista_licencias' %}" class="btn btn-sm btn-outline-light">Ver todas</a>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for lic in licencias_por_vencer %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ lic.nombre }}</strong>
+                                <span class="badge bg-{% if lic.dias_para_vencer <= 7 %}danger{% else %}warning{% endif %}">{{ lic.dias_para_vencer }} dias</span>
+                            </div>
+                            <small class="text-muted">{{ lic.equipo }} — vence {{ lic.fecha_vencimiento|date:"d/m/Y" }}</small>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted text-center">No hay licencias proximas a vencer 🎉</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="card shadow-sm border-primary mt-3">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <strong>🔧 Mantenimientos Proximos</strong>
+                    <a href="{% url 'lista_mantenimientos' %}" class="btn btn-sm btn-outline-light">Ver todos</a>
+                </div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for mp in mantenimientos_proximos %}
+                        <li class="list-group-item">
+                            <div class="d-flex justify-content-between">
+                                <strong>{{ mp.titulo }}</strong>
+                                <span class="badge bg-{% if mp.dias_para_vencer <= 3 %}danger{% else %}warning{% endif %}">{{ mp.proxima_fecha|date:"d/m/Y" }}</span>
+                            </div>
+                            <small class="text-muted">{{ mp.equipo }} — {{ mp.get_frecuencia_display }}</small>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted text-center">No hay mantenimientos proximos 🎉</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><strong>👤 Clientes con mas Equipos</strong></div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for cli in clientes_top %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>{{ cli.nombre }}</span>
+                            <span class="badge bg-primary">{{ cli.num_equipos }} equipos</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted text-center">Sin asignaciones activas</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+            <div class="card shadow-sm mt-3">
+                <div class="card-header bg-light"><strong>🔴 Equipos con mas Fallas</strong></div>
+                <div class="card-body p-0">
+                    <ul class="list-group list-group-flush">
+                        {% for eq in equipos_fallas %}
+                        <li class="list-group-item d-flex justify-content-between">
+                            <span>{{ eq.nombre }}</span>
+                            <span class="badge bg-danger">{{ eq.num_fallas }} fallas</span>
+                        </li>
+                        {% empty %}
+                        <li class="list-group-item text-muted text-center">Sin reparaciones registradas</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><strong>📂 Equipos por Categoria</strong></div>
+                <div class="card-body"><canvas id="chartCategorias" height="180"></canvas></div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><strong>📍 Equipos por Ubicacion</strong></div>
+                <div class="card-body"><canvas id="chartUbicaciones" height="180"></canvas></div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-fetch('/api/stats/')
-  .then(r => r.json())
-  .then(data => {
-    new Chart(document.getElementById('estadosChart'), {
-      type: 'doughnut',
-      data: {
-        labels: ['Disponibles', 'Asignados', 'En Reparacion', 'Dado de Baja'],
-        datasets: [{
-          data: [data.totales.disponibles, data.totales.asignados, data.totales.reparacion, data.totales.baja],
-          backgroundColor: ['#198754', '#0d6efd', '#ffc107', '#6c757d']
-        }]
-      },
-      options: { responsive: true, plugins: { title: { display: true, text: 'Equipos por Estado' } } }
+async function cargarStats() {
+    const res = await fetch('/api/stats/');
+    const data = await res.json();
+
+    new Chart(document.getElementById('chartEstados'), {
+        type: 'doughnut',
+        data: {
+            labels: ['Disponibles', 'Asignados', 'En Reparacion', 'Dados de Baja'],
+            datasets: [{
+                data: [data.totales.disponibles, data.totales.asignados, data.totales.reparacion, data.totales.baja],
+                backgroundColor: ['#198754', '#0d6efd', '#ffc107', '#6c757d']
+            }]
+        }
     });
 
-    new Chart(document.getElementById('trendChart'), {
-      type: 'line',
-      data: {
-        labels: data.asignaciones_trend.map(d => d.mes),
-        datasets: [{
-          label: 'Asignaciones',
-          data: data.asignaciones_trend.map(d => d.total),
-          borderColor: '#6610f2',
-          tension: 0.4,
-          fill: true,
-          backgroundColor: 'rgba(102,16,242,0.1)'
-        }]
-      },
-      options: { responsive: true, plugins: { title: { display: true, text: 'Tendencia Asignaciones (6 meses)' } } }
+    new Chart(document.getElementById('chartMarcas'), {
+        type: 'bar',
+        data: {
+            labels: data.por_marca.map(m => m.marca || 'Sin marca'),
+            datasets: [{ label: 'Equipos', data: data.por_marca.map(m => m.total), backgroundColor: '#0d6efd' }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
     });
-  });
 
-function marcarLeida(pk, btn) {
-  fetch('/alertas/' + pk + '/leida/', { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}' } })
-    .then(() => btn.closest('li').remove());
+    new Chart(document.getElementById('chartCategorias'), {
+        type: 'pie',
+        data: {
+            labels: data.por_categoria.map(c => c.nombre),
+            datasets: [{
+                data: data.por_categoria.map(c => c.total),
+                backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1', '#20c997']
+            }]
+        }
+    });
+
+    new Chart(document.getElementById('chartUbicaciones'), {
+        type: 'bar',
+        data: {
+            labels: data.por_ubicacion.map(u => u.nombre),
+            datasets: [{ label: 'Equipos', data: data.por_ubicacion.map(u => u.total), backgroundColor: '#20c997' }]
+        },
+        options: { scales: { y: { beginAtZero: true } } }
+    });
+}
+
+cargarStats();
+
+function marcarLeida(pk) {
+    fetch(`/alertas/${pk}/leida/`, {method: 'POST', headers: {'X-CSRFToken': '{{ csrf_token }}'}})
+        .then(r => r.json())
+        .then(d => { if(d.ok) location.reload(); });
 }
 </script>
 {% endblock %}

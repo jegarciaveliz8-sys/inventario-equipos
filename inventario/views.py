@@ -9,38 +9,69 @@ from django.views.decorators.http import require_POST
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.utils import timezone
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.template.loader import render_to_string
+from django.conf import settings
 from dateutil.relativedelta import relativedelta
-# from xhtml2pdf import pisa  # Reemplazado por xhtml2pdf
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from .models import (
     Equipo, Cliente, Asignacion, CambioReparacion,
-    HojaResponsabilidad, Accesorio, Alerta, Evidencia
+    HojaResponsabilidad, Accesorio, Alerta, Evidencia,
+    Ubicacion, Categoria, SoftwareLicencia, MantenimientoPreventivo
 )
 
 
-# ========== 1. DASHBOARD ==========
+# ========== 1. DASHBOARD MEJORADO ==========
 
 class DashboardView(TemplateView):
     template_name = 'inventario/dashboard.html'
 
     def get_context_data(self, **kwargs):
         ctx = super().get_context_data(**kwargs)
+        hoy = timezone.now().date()
+
         ctx['total_equipos'] = Equipo.objects.count()
         ctx['asignados'] = Equipo.objects.filter(estado='asignado').count()
         ctx['en_reparacion'] = Equipo.objects.filter(estado='en_reparacion').count()
         ctx['disponibles'] = Equipo.objects.filter(estado='disponible').count()
+        ctx['dados_baja'] = Equipo.objects.filter(estado='dado_de_baja').count()
         ctx['clientes'] = Cliente.objects.count()
         ctx['asignaciones_activas'] = Asignacion.objects.filter(activa=True).count()
         ctx['hojas_pendientes'] = HojaResponsabilidad.objects.filter(firmado=False).count()
-        ctx['alertas'] = Alerta.objects.filter(leida=False)[:5]
+        ctx['alertas'] = Alerta.objects.filter(leida=False)[:8]
+        ctx['total_alertas'] = Alerta.objects.filter(leida=False).count()
         ctx['stock_bajo'] = [a for a in Accesorio.objects.all() if a.stock_bajo()]
+        ctx['ubicaciones'] = Ubicacion.objects.filter(activa=True).annotate(
+            num_equipos=Count('equipos')
+        ).order_by('-num_equipos')[:6]
+        ctx['categorias'] = Categoria.objects.annotate(
+            num_equipos=Count('equipos')
+        ).order_by('-num_equipos')[:6]
+        ctx['licencias_por_vencer'] = SoftwareLicencia.objects.filter(
+            activa=True,
+            fecha_vencimiento__lte=hoy + relativedelta(days=30),
+            fecha_vencimiento__gte=hoy
+        ).select_related('equipo')[:5]
+        ctx['mantenimientos_proximos'] = MantenimientoPreventivo.objects.filter(
+            completado=False,
+            proxima_fecha__lte=hoy + relativedelta(days=7),
+            proxima_fecha__gte=hoy
+        ).select_related('equipo')[:5]
+        ctx['equipos_fallas'] = Equipo.objects.annotate(
+            num_fallas=Count('cambios')
+        ).filter(num_fallas__gt=0).order_by('-num_fallas')[:5]
+        ctx['clientes_top'] = Cliente.objects.annotate(
+            num_equipos=Count('asignaciones', filter=Q(asignaciones__activa=True))
+        ).filter(num_equipos__gt=0).order_by('-num_equipos')[:5]
+        ctx['costo_total_reparaciones'] = CambioReparacion.objects.aggregate(
+            total=Sum('costo')
+        )['total'] or 0
+
         return ctx
 
 
-# ========== 2. API STATS ==========
+# ========== 2. API STATS MEJORADA ==========
 
 @api_view(['GET'])
 def dashboard_stats_api(request):
@@ -52,6 +83,9 @@ def dashboard_stats_api(request):
     dado_baja = Equipo.objects.filter(estado='dado_de_baja').count()
 
     por_marca = list(Equipo.objects.values('marca').annotate(total=Count('id')).order_by('-total')[:8])
+    por_categoria = list(Categoria.objects.annotate(total=Count('equipos')).values('nombre', 'total').order_by('-total')[:6])
+    por_ubicacion = list(Ubicacion.objects.filter(activa=True).annotate(total=Count('equipos')).values('nombre', 'total').order_by('-total')[:6])
+
     asignaciones_mes = []
     for i in range(5, -1, -1):
         mes = hoy - relativedelta(months=i)
@@ -60,11 +94,22 @@ def dashboard_stats_api(request):
 
     reparaciones_tipo = list(CambioReparacion.objects.values('tipo').annotate(total=Count('id')))
 
+    licencias_por_tipo = list(SoftwareLicencia.objects.filter(activa=True).values('tipo').annotate(total=Count('id')))
+    mantenimientos_estado = {
+        'vencidos': MantenimientoPreventivo.objects.filter(completado=False, proxima_fecha__lt=hoy.date()).count(),
+        'proximos_7d': MantenimientoPreventivo.objects.filter(completado=False, proxima_fecha__lte=hoy.date() + relativedelta(days=7), proxima_fecha__gte=hoy.date()).count(),
+        'completados': MantenimientoPreventivo.objects.filter(completado=True).count(),
+    }
+
     return Response({
         'totales': {'total': total, 'asignados': asignados, 'reparacion': en_reparacion, 'disponibles': disponibles, 'baja': dado_baja},
         'por_marca': por_marca,
+        'por_categoria': por_categoria,
+        'por_ubicacion': por_ubicacion,
         'asignaciones_trend': asignaciones_mes,
         'reparaciones_tipo': reparaciones_tipo,
+        'licencias_por_tipo': licencias_por_tipo,
+        'mantenimientos': mantenimientos_estado,
     })
 
 
@@ -83,10 +128,12 @@ class EquipoFichaPublicaView(DetailView):
         ctx['historial_reparaciones'] = self.object.cambios.all()[:10]
         ctx['historial_completo'] = self.object.history.all()[:10]
         ctx['evidencias'] = self.object.evidencias.all()[:6]
+        ctx['licencias'] = self.object.licencias.filter(activa=True)
+        ctx['mantenimientos'] = self.object.mantenimientos_preventivos.filter(completado=False)
         return ctx
 
 
-# ========== 4. ESCANEAR QR (camara) ==========
+# ========== 4. ESCANEAR QR ==========
 
 def escanear_qr(request):
     return render(request, 'inventario/escanear_qr.html')
@@ -97,12 +144,7 @@ def escanear_qr(request):
 @staff_member_required
 def busqueda_global(request):
     q = request.GET.get('q', '').strip()
-    resultados = {
-        'equipos': [],
-        'clientes': [],
-        'asignaciones': [],
-        'reparaciones': [],
-    }
+    resultados = {'equipos': [], 'clientes': [], 'asignaciones': [], 'reparaciones': []}
     if q:
         resultados['equipos'] = Equipo.objects.filter(
             Q(nombre__icontains=q) | Q(serial__icontains=q) | Q(marca__icontains=q) | Q(modelo__icontains=q)
@@ -126,6 +168,8 @@ def reporte_equipos(request):
     equipos = Equipo.objects.all()
     marca = request.GET.get('marca', '')
     estado = request.GET.get('estado', '')
+    categoria = request.GET.get('categoria', '')
+    ubicacion = request.GET.get('ubicacion', '')
     fecha_desde = request.GET.get('fecha_desde', '')
     fecha_hasta = request.GET.get('fecha_hasta', '')
 
@@ -133,19 +177,29 @@ def reporte_equipos(request):
         equipos = equipos.filter(marca__icontains=marca)
     if estado:
         equipos = equipos.filter(estado=estado)
+    if categoria:
+        equipos = equipos.filter(categoria_id=categoria)
+    if ubicacion:
+        equipos = equipos.filter(ubicacion_id=ubicacion)
     if fecha_desde:
         equipos = equipos.filter(fecha_registro__date__gte=fecha_desde)
     if fecha_hasta:
         equipos = equipos.filter(fecha_registro__date__lte=fecha_hasta)
 
-    # Exportar a Excel
     if request.GET.get('exportar') == 'excel':
         wb = openpyxl.Workbook()
         ws = wb.active
         ws.title = 'Equipos'
-        ws.append(['Nombre', 'Marca', 'Modelo', 'Serial', 'Estado', 'Fecha Registro'])
+        ws.append(['Nombre', 'Categoria', 'Marca', 'Modelo', 'Serial', 'Ubicacion', 'Estado', 'Fecha Registro'])
         for e in equipos:
-            ws.append([e.nombre, e.marca, e.modelo, e.serial, e.get_estado_display(), e.fecha_registro.strftime('%d/%m/%Y')])
+            ws.append([
+                e.nombre,
+                e.categoria.nombre if e.categoria else '—',
+                e.marca, e.modelo, e.serial,
+                e.ubicacion.nombre if e.ubicacion else '—',
+                e.get_estado_display(),
+                e.fecha_registro.strftime('%d/%m/%Y')
+            ])
         buffer = BytesIO()
         wb.save(buffer)
         buffer.seek(0)
@@ -153,7 +207,6 @@ def reporte_equipos(request):
         response['Content-Disposition'] = 'attachment; filename=reporte_equipos.xlsx'
         return response
 
-    # Exportar a PDF
     if request.GET.get('exportar') == 'pdf':
         html_string = render_to_string('reportes/reporte_equipos.html', {'equipos': equipos, 'filtros': request.GET})
         pdf_buffer = BytesIO()
@@ -166,14 +219,16 @@ def reporte_equipos(request):
         return response
 
     marcas = Equipo.objects.exclude(marca='').values_list('marca', flat=True).distinct()
+    categorias = Categoria.objects.all()
+    ubicaciones = Ubicacion.objects.filter(activa=True)
+
     return render(request, 'inventario/reporte_equipos.html', {
-        'equipos': equipos,
-        'marcas': marcas,
-        'filtros': request.GET
+        'equipos': equipos, 'marcas': marcas, 'categorias': categorias,
+        'ubicaciones': ubicaciones, 'filtros': request.GET
     })
 
 
-# ========== 7. EVIDENCIA (fotos antes/después) ==========
+# ========== 7. EVIDENCIA ==========
 
 @staff_member_required
 def subir_evidencia(request):
@@ -185,15 +240,11 @@ def subir_evidencia(request):
         if equipo_id and imagen:
             equipo = get_object_or_404(Equipo, pk=equipo_id)
             Evidencia.objects.create(
-                equipo=equipo,
-                tipo=tipo,
-                descripcion=descripcion,
-                imagen=imagen,
-                subido_por=request.user
+                equipo=equipo, tipo=tipo, descripcion=descripcion,
+                imagen=imagen, subido_por=request.user
             )
             messages.success(request, 'Evidencia subida correctamente.')
         return redirect('subir_evidencia')
-
     equipos = Equipo.objects.all()
     return render(request, 'inventario/subir_evidencia.html', {'equipos': equipos})
 
@@ -274,13 +325,12 @@ def importar_equipos_excel(request):
     return render(request, 'admin/importar_equipos.html')
 
 
-# ========== 12. ALERTAS ==========
+# ========== 12. ALERTAS MEJORADAS ==========
 
 @staff_member_required
 def verificar_alertas(request):
     hoy = timezone.now().date()
     creadas = 0
-    from datetime import timedelta
 
     for eq in Equipo.objects.filter(fecha_fin_garantia__lte=hoy+timedelta(days=30), fecha_fin_garantia__gte=hoy, estado__in=['disponible','asignado']):
         _, c = Alerta.objects.get_or_create(tipo='garantia', equipo=eq, defaults={'titulo':f'Garantia por vencer: {eq}','mensaje':f'La garantia del equipo {eq} vence el {eq.fecha_fin_garantia}.'})
@@ -299,6 +349,14 @@ def verificar_alertas(request):
                 _, c = Alerta.objects.get_or_create(tipo='revision', equipo=asig.equipo, defaults={'titulo':f'Revision pendiente: {asig.equipo}','mensaje':f'El equipo {asig.equipo} asignado a {asig.cliente} lleva mas de 1 ano sin revision.'})
                 if c: creadas += 1
 
+    for lic in SoftwareLicencia.objects.filter(activa=True, fecha_vencimiento__lte=hoy+timedelta(days=30), fecha_vencimiento__gte=hoy):
+        _, c = Alerta.objects.get_or_create(tipo='licencia', licencia=lic, defaults={'titulo':f'Licencia por vencer: {lic.nombre}','mensaje':f'La licencia {lic.nombre} del equipo {lic.equipo} vence el {lic.fecha_vencimiento}.'})
+        if c: creadas += 1
+
+    for mp in MantenimientoPreventivo.objects.filter(completado=False, proxima_fecha__lte=hoy+timedelta(days=7)):
+        _, c = Alerta.objects.get_or_create(tipo='mantenimiento', mantenimiento=mp, defaults={'titulo':f'Mantenimiento: {mp.titulo}','mensaje':f'El mantenimiento "{mp.titulo}" del equipo {mp.equipo} esta programado para el {mp.proxima_fecha}.'})
+        if c: creadas += 1
+
     messages.success(request, f'Se verificaron alertas. {creadas} nuevas creadas.')
     return redirect('dashboard')
 
@@ -311,79 +369,87 @@ def marcar_alerta_leida(request, pk):
     return JsonResponse({'ok': True})
 
 
-# ========== METRICAS AVANZADAS ==========
+# ========== 13. METRICAS AVANZADAS ==========
 
 @staff_member_required
 def metricas_avanzadas(request):
-    from django.db.models import Avg, Count, F
-    from django.db.models.functions import ExtractMonth
-
-    # Tiempo promedio de reparacion
     reparaciones = CambioReparacion.objects.all()
     total_reparaciones = reparaciones.count()
-
-    # Equipos que mas fallan (top 5)
-    equipos_fallas = Equipo.objects.annotate(
-        num_fallas=Count('cambios')
-    ).filter(num_fallas__gt=0).order_by('-num_fallas')[:5]
-
-    # Clientes con mas equipos asignados
-    clientes_top = Cliente.objects.annotate(
-        num_equipos=Count('asignaciones', filter=Q(asignaciones__activa=True))
-    ).filter(num_equipos__gt=0).order_by('-num_equipos')[:5]
-
-    # Costo total en reparaciones
-    from django.db.models import Sum
+    equipos_fallas = Equipo.objects.annotate(num_fallas=Count('cambios')).filter(num_fallas__gt=0).order_by('-num_fallas')[:5]
+    clientes_top = Cliente.objects.annotate(num_equipos=Count('asignaciones', filter=Q(asignaciones__activa=True))).filter(num_equipos__gt=0).order_by('-num_equipos')[:5]
     costo_total = reparaciones.aggregate(total=Sum('costo'))['total'] or 0
-
-    # Equipos por estado
     por_estado = {
         'disponible': Equipo.objects.filter(estado='disponible').count(),
         'asignado': Equipo.objects.filter(estado='asignado').count(),
         'en_reparacion': Equipo.objects.filter(estado='en_reparacion').count(),
         'dado_de_baja': Equipo.objects.filter(estado='dado_de_baja').count(),
     }
+    costo_por_tipo = list(CambioReparacion.objects.values('tipo').annotate(total=Sum('costo')).order_by('-total'))
+    equipos_por_categoria = list(Categoria.objects.annotate(total=Count('equipos')).values('nombre', 'total').order_by('-total'))
+    equipos_por_ubicacion = list(Ubicacion.objects.filter(activa=True).annotate(total=Count('equipos')).values('nombre', 'total').order_by('-total'))
+    licencias_activas = SoftwareLicencia.objects.filter(activa=True).count()
+    licencias_por_vencer = SoftwareLicencia.objects.filter(activa=True, fecha_vencimiento__lte=timezone.now().date()+timedelta(days=30)).count()
+    licencias_vencidas = SoftwareLicencia.objects.filter(activa=True, fecha_vencimiento__lt=timezone.now().date()).count()
 
     return render(request, 'inventario/metricas.html', {
-        'total_reparaciones': total_reparaciones,
-        'equipos_fallas': equipos_fallas,
-        'clientes_top': clientes_top,
-        'costo_total': costo_total,
-        'por_estado': por_estado,
+        'total_reparaciones': total_reparaciones, 'equipos_fallas': equipos_fallas,
+        'clientes_top': clientes_top, 'costo_total': costo_total, 'por_estado': por_estado,
+        'costo_por_tipo': costo_por_tipo, 'equipos_por_categoria': equipos_por_categoria,
+        'equipos_por_ubicacion': equipos_por_ubicacion, 'licencias_activas': licencias_activas,
+        'licencias_por_vencer': licencias_por_vencer, 'licencias_vencidas': licencias_vencidas,
     })
 
-from django.shortcuts import render
 
+# ========== 14. MANTENIMIENTOS PREVENTIVOS ==========
+
+@staff_member_required
+def lista_mantenimientos(request):
+    hoy = timezone.now().date()
+    proximos = MantenimientoPreventivo.objects.filter(completado=False, proxima_fecha__gte=hoy).select_related('equipo').order_by('proxima_fecha')
+    vencidos = MantenimientoPreventivo.objects.filter(completado=False, proxima_fecha__lt=hoy).select_related('equipo').order_by('proxima_fecha')
+    completados = MantenimientoPreventivo.objects.filter(completado=True).select_related('equipo').order_by('-ultima_fecha')[:20]
+    return render(request, 'inventario/mantenimientos.html', {'proximos': proximos, 'vencidos': vencidos, 'completados': completados})
+
+
+@staff_member_required
+def completar_mantenimiento(request, pk):
+    mp = get_object_or_404(MantenimientoPreventivo, pk=pk)
+    mp.completado = True
+    mp.ultima_fecha = timezone.now().date()
+    mp.proxima_fecha = mp.calcular_proxima_fecha()
+    mp.save()
+    messages.success(request, f'Mantenimiento "{mp.titulo}" marcado como completado.')
+    return redirect('lista_mantenimientos')
+
+
+# ========== 15. LICENCIAS DE SOFTWARE ==========
+
+@staff_member_required
+def lista_licencias(request):
+    hoy = timezone.now().date()
+    activas = SoftwareLicencia.objects.filter(activa=True).select_related('equipo')
+    por_vencer = activas.filter(fecha_vencimiento__lte=hoy+timedelta(days=30), fecha_vencimiento__gte=hoy)
+    vencidas = activas.filter(fecha_vencimiento__lt=hoy)
+    return render(request, 'inventario/licencias.html', {'activas': activas, 'por_vencer': por_vencer, 'vencidas': vencidas})
+
+
+# ========== 16. EVIDENCIA MOVIL ==========
 
 def subir_evidencia_movil(request):
-    """Vista para subir evidencia desde celular con camara"""
     return render(request, 'inventario/subir_evidencia_movil.html')
 
-from django.shortcuts import render, get_object_or_404
 
+# ========== 17. REPORTE EVIDENCIAS PDF ==========
 
 import os
-import tempfile
 import requests
-from django.http import HttpResponse
-from django.utils import timezone
-# from xhtml2pdf import pisa  # Reemplazado por xhtml2pdf
-from django.template.loader import render_to_string
-from .models import Equipo, Evidencia
 
 
 def reporte_evidencias_pdf(request):
-    """
-    Genera un PDF profesional con el reporte de evidencias de un equipo.
-    Incluye tabla de datos, links a Cloudinary y codigo QR.
-    Uso: /reporte/evidencias/pdf/?equipo=TEST001
-    """
     equipo_id = request.GET.get('equipo')
-    
     if not equipo_id:
         return HttpResponse("Debes enviar el parametro ?equipo=ID o SERIAL", status=400)
 
-    # Buscar equipo por serial o ID
     equipo = None
     try:
         equipo = Equipo.objects.get(serial=equipo_id)
@@ -394,17 +460,14 @@ def reporte_evidencias_pdf(request):
         except (ValueError, Equipo.DoesNotExist):
             return HttpResponse(f"Equipo no encontrado: {equipo_id}", status=404)
 
-    # Obtener evidencias
     evidencias = Evidencia.objects.filter(equipo=equipo).order_by('-fecha')
 
-    # Generar QR con link al reporte (usamos la URL de la API de reporte)
     qr_base64 = None
     try:
         import qrcode
-        from io import BytesIO
         import base64
-        
-        reporte_url = f"https://inventario-equipos-hkmd.onrender.com/api/evidencias/reporte/?equipo={equipo.serial}"
+        site_url = getattr(settings, 'SITE_URL', 'https://inventario-equipos-hkmd.onrender.com')
+        reporte_url = f"{site_url}/api/evidencias/reporte/?equipo={equipo.serial}"
         qr = qrcode.make(reporte_url, box_size=6, border=2)
         buffer = BytesIO()
         qr.save(buffer, format='PNG')
@@ -412,16 +475,12 @@ def reporte_evidencias_pdf(request):
     except Exception:
         qr_base64 = None
 
-    # Renderizar HTML
     html_string = render_to_string('inventario/reporte_evidencias_pdf.html', {
-        'equipo': equipo,
-        'evidencias': evidencias,
+        'equipo': equipo, 'evidencias': evidencias,
         'total_evidencias': evidencias.count(),
-        'fecha_generacion': timezone.now(),
-        'qr_base64': qr_base64,
+        'fecha_generacion': timezone.now(), 'qr_base64': qr_base64,
     })
 
-    # Generar PDF
     pdf_buffer = BytesIO()
     pisa_status = pisa.CreatePDF(html_string, dest=pdf_buffer)
     if pisa_status.err:

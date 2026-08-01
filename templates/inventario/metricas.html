@@ -1,36 +1,163 @@
 {% extends "base.html" %}
 {% block content %}
-<div class="container py-4">
-  <h2>📈 Métricas Avanzadas</h2>
+<div class="container-fluid py-4">
+    <h1 class="mb-4">📈 Metricas Avanzadas</h1>
 
-  <div class="row g-3 mb-4">
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h3>Q{{ costo_total }}</h3><small>Costo Total Reparaciones</small></div></div></div>
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h3>{{ total_reparaciones }}</h3><small>Total Reparaciones</small></div></div></div>
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h3>{{ por_estado.disponibles }}</h3><small>Disponibles</small></div></div></div>
-    <div class="col-md-3"><div class="card text-center"><div class="card-body"><h3>{{ por_estado.asignados }}</h3><small>Asignados</small></div></div></div>
-  </div>
+    <div class="row g-4">
+        <div class="col-md-3">
+            <div class="card text-center border-primary">
+                <div class="card-body">
+                    <h2 class="text-primary">{{ total_reparaciones }}</h2>
+                    <p class="text-muted">Total Reparaciones</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-success">
+                <div class="card-body">
+                    <h2 class="text-success">Q{{ costo_total|floatformat:2 }}</h2>
+                    <p class="text-muted">Costo Total</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-warning">
+                <div class="card-body">
+                    <h2 class="text-warning">{{ licencias_por_vencer }}</h2>
+                    <p class="text-muted">Licencias por Vencer</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card text-center border-danger">
+                <div class="card-body">
+                    <h2 class="text-danger">{{ licencias_vencidas }}</h2>
+                    <p class="text-muted">Licencias Vencidas</p>
+                </div>
+            </div>
+        </div>
+    </div>
 
-  <div class="row">
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-header"><strong>🔧 Equipos que más fallan</strong></div>
-        <ul class="list-group list-group-flush">
-          {% for eq in equipos_fallas %}
-          <li class="list-group-item d-flex justify-content-between">{{ eq }} <span class="badge bg-danger">{{ eq.num_fallas }} fallas</span></li>
-          {% empty %}<li class="list-group-item text-muted">Sin datos</li>{% endfor %}
-        </ul>
-      </div>
+    <div class="row g-4 mt-2">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><strong>💰 Costo por Tipo de Reparacion</strong></div>
+                <div class="card-body">
+                    <canvas id="chartCostoTipo" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><strong>📂 Equipos por Categoria</strong></div>
+                <div class="card-body">
+                    <canvas id="chartCategorias" height="200"></canvas>
+                </div>
+            </div>
+        </div>
     </div>
-    <div class="col-md-6">
-      <div class="card">
-        <div class="card-header"><strong>👤 Clientes con más equipos</strong></div>
-        <ul class="list-group list-group-flush">
-          {% for c in clientes_top %}
-          <li class="list-group-item d-flex justify-content-between">{{ c }} <span class="badge bg-primary">{{ c.num_equipos }} equipos</span></li>
-          {% empty %}<li class="list-group-item text-muted">Sin datos</li>{% endfor %}
-        </ul>
-      </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><strong>📍 Equipos por Ubicacion</strong></div>
+                <div class="card-body">
+                    <canvas id="chartUbicaciones" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><strong>👤 Clientes con mas Equipos Asignados</strong></div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0">
+                        <thead><tr><th>Cliente</th><th>Equipos</th></tr></thead>
+                        <tbody>
+                            {% for cli in clientes_top %}
+                            <tr><td>{{ cli.nombre }}</td><td><span class="badge bg-primary">{{ cli.num_equipos }}</span></td></tr>
+                            {% empty %}
+                            <tr><td colspan="2" class="text-center text-muted">Sin datos</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
     </div>
-  </div>
+
+    <div class="row g-4 mt-2">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><strong>🔴 Equipos con mas Fallas</strong></div>
+                <div class="card-body p-0">
+                    <table class="table table-striped mb-0">
+                        <thead><tr><th>Equipo</th><th>Fallas</th></tr></thead>
+                        <tbody>
+                            {% for eq in equipos_fallas %}
+                            <tr><td>{{ eq.nombre }} ({{ eq.serial }})</td><td><span class="badge bg-danger">{{ eq.num_fallas }}</span></td></tr>
+                            {% empty %}
+                            <tr><td colspan="2" class="text-center text-muted">Sin datos</td></tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-light"><strong>📊 Equipos por Estado</strong></div>
+                <div class="card-body">
+                    <canvas id="chartEstados" height="200"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+const costoTipo = {{ costo_por_tipo|safe }};
+new Chart(document.getElementById('chartCostoTipo'), {
+    type: 'bar',
+    data: {
+        labels: costoTipo.map(c => c.tipo),
+        datasets: [{ label: 'Costo (Q)', data: costoTipo.map(c => c.total), backgroundColor: '#0d6efd' }]
+    },
+    options: { scales: { y: { beginAtZero: true } } }
+});
+
+const cats = {{ equipos_por_categoria|safe }};
+new Chart(document.getElementById('chartCategorias'), {
+    type: 'doughnut',
+    data: {
+        labels: cats.map(c => c.nombre),
+        datasets: [{
+            data: cats.map(c => c.total),
+            backgroundColor: ['#0d6efd', '#198754', '#ffc107', '#dc3545', '#6f42c1']
+        }]
+    }
+});
+
+const ubi = {{ equipos_por_ubicacion|safe }};
+new Chart(document.getElementById('chartUbicaciones'), {
+    type: 'bar',
+    data: {
+        labels: ubi.map(u => u.nombre),
+        datasets: [{ label: 'Equipos', data: ubi.map(u => u.total), backgroundColor: '#20c997' }]
+    },
+    options: { scales: { y: { beginAtZero: true } } }
+});
+
+const estados = {{ por_estado|safe }};
+new Chart(document.getElementById('chartEstados'), {
+    type: 'pie',
+    data: {
+        labels: ['Disponibles', 'Asignados', 'En Reparacion', 'Dados de Baja'],
+        datasets: [{
+            data: [estados.disponible, estados.asignado, estados.en_reparacion, estados.dado_de_baja],
+            backgroundColor: ['#198754', '#0d6efd', '#ffc107', '#6c757d']
+        }]
+    }
+});
+</script>
 {% endblock %}
