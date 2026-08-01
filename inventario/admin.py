@@ -93,6 +93,12 @@ class EquipoAdmin(SimpleHistoryAdmin):
         ('Auditoria', {'fields': ('fecha_registro',)}),
     )
 
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        form.base_fields['categoria'].required = True
+        form.base_fields['ubicacion'].required = True
+        return form
+
     def get_urls(self):
         urls = super().get_urls()
         custom_urls = [
@@ -144,7 +150,6 @@ class EquipoAdmin(SimpleHistoryAdmin):
             return format_html('<a href="{}" target="_blank"><img src="{}" width="150" style="border:1px solid #ccc;" /></a><br><small>Click para ver en grande / escanear</small>', obj.qr_code.url, obj.qr_code.url)
         return format_html('<span style="color:red;">Sin QR. Guarde el equipo para generarlo.</span>')
     qr_preview.short_description = 'Codigo QR'
-
 
 @admin.register(Cliente)
 class ClienteAdmin(SimpleHistoryAdmin):

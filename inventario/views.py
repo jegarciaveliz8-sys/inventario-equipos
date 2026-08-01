@@ -84,8 +84,39 @@ def dashboard_stats_api(request):
     dado_baja = Equipo.objects.filter(estado='dado_de_baja').count()
 
     por_marca = list(Equipo.objects.values('marca').annotate(total=Count('id')).order_by('-total')[:8])
-    por_categoria = list(Categoria.objects.annotate(total=Count('equipos')).values('nombre', 'total').order_by('-total')[:6])
-    por_ubicacion = list(Ubicacion.objects.filter(activa=True).annotate(total=Count('equipos')).values('nombre', 'total').order_by('-total')[:6])
+
+    # --- CATEGORÍAS (con fallback) ---
+    categorias_con_equipos = list(
+        Categoria.objects
+        .annotate(total=Count('equipos'))
+        .filter(total__gt=0)
+        .values('nombre', 'total')
+        .order_by('-total')[:6]
+    )
+    sin_categoria = Equipo.objects.filter(categoria__isnull=True).count()
+    if sin_categoria > 0:
+        categorias_con_equipos.append({
+            'nombre': '⚠️ Sin categoría',
+            'total': sin_categoria
+        })
+    por_categoria = categorias_con_equipos
+
+    # --- UBICACIONES (con fallback) ---
+    ubicaciones_con_equipos = list(
+        Ubicacion.objects
+        .filter(activa=True)
+        .annotate(total=Count('equipos'))
+        .filter(total__gt=0)
+        .values('nombre', 'total')
+        .order_by('-total')[:6]
+    )
+    sin_ubicacion = Equipo.objects.filter(ubicacion__isnull=True).count()
+    if sin_ubicacion > 0:
+        ubicaciones_con_equipos.append({
+            'nombre': '⚠️ Sin ubicación',
+            'total': sin_ubicacion
+        })
+    por_ubicacion = ubicaciones_con_equipos
 
     asignaciones_mes = []
     for i in range(5, -1, -1):
@@ -112,7 +143,6 @@ def dashboard_stats_api(request):
         'licencias_por_tipo': licencias_por_tipo,
         'mantenimientos': mantenimientos_estado,
     })
-
 
 # ========== 3. FICHA PUBLICA QR ==========
 
