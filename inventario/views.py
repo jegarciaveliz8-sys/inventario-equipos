@@ -675,3 +675,31 @@ def seed_licencias_mantenimientos_web(request):
 def manual_usuario(request):
     """Renderiza el Manual de Usuario del sistema."""
     return render(request, 'inventario/manual.html')
+
+def asignar_defaults_produccion(request):
+    """Endpoint temporal para asignar categoría/ubicación por defecto a equipos sin clasificar."""
+    TOKEN = "fixprod2024"
+    if request.GET.get("token") != TOKEN:
+        return HttpResponse("Acceso no autorizado", status=403)
+    
+    from .models import Equipo, Categoria, Ubicacion
+    
+    default_cat = Categoria.objects.first()
+    default_ubi = Ubicacion.objects.filter(activa=True).first()
+    
+    if not default_cat or not default_ubi:
+        return HttpResponse("<h1>❌ Error: Crea al menos una Categoría y una Ubicación en el Admin primero</h1>", status=400)
+    
+    equipos_sin_cat = Equipo.objects.filter(categoria__isnull=True)
+    equipos_sin_ubi = Equipo.objects.filter(ubicacion__isnull=True)
+    
+    count_cat = equipos_sin_cat.update(categoria=default_cat)
+    count_ubi = equipos_sin_ubi.update(ubicacion=default_ubi)
+    
+    return HttpResponse(f"""
+    <h1>✅ Defaults asignados</h1>
+    <p><strong>{count_cat}</strong> equipos con categoría asignada: <em>{default_cat.nombre}</em></p>
+    <p><strong>{count_ubi}</strong> equipos con ubicación asignada: <em>{default_ubi.nombre}</em></p>
+    <p style="color:#dc3545;"><strong>⚠️ Importante:</strong> Ahora entra al Admin y cambia las categorías/ubicaciones a los valores correctos.</p>
+    <a href="/admin/inventario/equipo/" style="padding:10px 20px;background:#0d6efd;color:white;text-decoration:none;border-radius:5px;">Ir al Admin</a>
+    """)
