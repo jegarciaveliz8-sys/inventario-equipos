@@ -490,3 +490,152 @@ def reporte_evidencias_pdf(request):
     response = HttpResponse(pdf_buffer, content_type='application/pdf')
     response['Content-Disposition'] = f'inline; filename="reporte_evidencias_{equipo.serial}.pdf"'
     return response
+
+
+# ========== ENDPOINT TEMPORAL PARA SEED EN RENDER ==========
+
+def seed_licencias_mantenimientos_web(request):
+    """Endpoint temporal para ejecutar seed en Render (plan gratuito sin shell)."""
+    TOKEN_SECRETO = "renderseed2024"
+    token = request.GET.get("token", "")
+    
+    if token != TOKEN_SECRETO:
+        return HttpResponse("Acceso no autorizado", status=403)
+    
+    from datetime import date, timedelta
+    from decimal import Decimal
+    import random
+    from inventario.models import Equipo, SoftwareLicencia, MantenimientoPreventivo, Alerta
+    
+    equipos = list(Equipo.objects.all())
+    if not equipos:
+        return HttpResponse("<h1>❌ No hay equipos en la base de datos</h1>", status=400)
+    
+    resultados = []
+    resultados.append(f"<p>Procesando {len(equipos)} equipos...</p>")
+    
+    # LICENCIAS
+    licencias_data = [
+        ("Windows 11 Pro", "os", 365),
+        ("Microsoft Office 365", "office", 365),
+        ("Kaspersky Endpoint Security", "antivirus", 365),
+        ("AutoCAD 2024", "cad", 365),
+        ("Adobe Creative Cloud", "otro", 365),
+        ("SQL Server 2022", "db", 730),
+        ("VMware Workstation", "otro", 730),
+        ("Norton Antivirus", "antivirus", 365),
+        ("Windows Server 2022", "os", 730),
+        ("Microsoft Project", "office", 365),
+        ("Autodesk Revit", "cad", 365),
+        ("Bitdefender GravityZone", "antivirus", 365),
+    ]
+    
+    licencias_creadas = 0
+    for equipo in equipos:
+        for _ in range(random.randint(1, 3)):
+            nombre, tipo, dias = random.choice(licencias_data)
+            if random.random() < 0.3:
+                inicio = date.today() - timedelta(days=random.randint(300, 340))
+            else:
+                inicio = date.today() - timedelta(days=random.randint(0, 300))
+            venc = inicio + timedelta(days=dias)
+            clave = f"XXXXX-XXXXX-XXXXX-XXXXX-{random.randint(10000,99999)}"
+            costo = Decimal(random.randint(500, 8000))
+            
+            obj, created = SoftwareLicencia.objects.get_or_create(
+                equipo=equipo, nombre=nombre,
+                defaults={"tipo": tipo, "clave": clave, "fecha_inicio": inicio,
+                          "fecha_vencimiento": venc, "costo": costo, "activa": True}
+            )
+            if created:
+                licencias_creadas += 1
+    
+    resultados.append(f"<p>✅ <strong>{licencias_creadas}</strong> licencias de software creadas</p>")
+    
+    # MANTENIMIENTOS
+    mantenimientos_data = [
+        ("Limpieza interna y cambio de pasta termica", "trimestral"),
+        ("Revision de bateria y calibracion", "semestral"),
+        ("Actualizacion de firmware y drivers", "trimestral"),
+        ("Limpieza de ventiladores y disipadores", "mensual"),
+        ("Revision de cables y conectores", "semestral"),
+        ("Escaneo de virus y optimizacion", "mensual"),
+        ("Respaldo de datos y verificacion", "semanal"),
+        ("Revision de rendimiento y temperatura", "mensual"),
+        ("Limpieza de pantalla y teclado", "semanal"),
+        ("Revision de garantia y estado fisico", "anual"),
+    ]
+    tecnicos = ["Luis Torres", "Sandra Morales", "Fernando Paz", "Carlos Mendez",
+                "Ana Lopez", "Diana Herrera", "Pedro Ruiz"]
+    
+    mant_creados = 0
+    for equipo in equipos:
+        for _ in range(random.randint(1, 2)):
+            titulo, freq = random.choice(mantenimientos_data)
+            tecnico = random.choice(tecnicos)
+            completado = random.random() < 0.4
+            if completado:
+                ultima = date.today() - timedelta(days=random.randint(1, 60))
+            else:
+                ultima = date.today() - timedelta(days=random.randint(-30, 90))
+            
+            obj, created = MantenimientoPreventivo.objects.get_or_create(
+                equipo=equipo, titulo=titulo,
+                defaults={"descripcion": f"{titulo} para {equipo.nombre}.",
+                          "frecuencia": freq,
+                          "ultima_fecha": ultima if completado else (ultima if ultima < date.today() else None),
+                          "tecnico": tecnico, "completado": completado}
+            )
+            if created:
+                mant_creados += 1
+    
+    resultados.append(f"<p>✅ <strong>{mant_creados}</strong> mantenimientos preventivos creados</p>")
+    
+    # ALERTAS
+    hoy = date.today()
+    alertas = 0
+    for lic in SoftwareLicencia.objects.filter(activa=True, fecha_vencimiento__lte=hoy+timedelta(days=30), fecha_vencimiento__gte=hoy):
+        _, c = Alerta.objects.get_or_create(
+            tipo="licencia", licencia=lic,
+            defaults={"titulo": f"Licencia por vencer: {lic.nombre}",
+                      "mensaje": f"La licencia {lic.nombre} de {lic.equipo} vence el {lic.fecha_vencimiento}."})
+        if c:
+            alertas += 1
+    
+    for mp in MantenimientoPreventivo.objects.filter(completado=False, proxima_fecha__lte=hoy+timedelta(days=7)):
+        _, c = Alerta.objects.get_or_create(
+            tipo="mantenimiento", mantenimiento=mp,
+            defaults={"titulo": f"Mantenimiento: {mp.titulo}",
+                      "mensaje": f'El mantenimiento "{mp.titulo}" de {mp.equipo} esta programado para el {mp.proxima_fecha}.'})
+        if c:
+            alertas += 1
+    
+    resultados.append(f"<p>✅ <strong>{alertas}</strong> alertas generadas</p>")
+    
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head><title>Seed Completado</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }}
+        .ok {{ color: green; }}
+        h1 {{ color: #2c3e50; }}
+        .box {{ background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #198754; }}
+    </style>
+    </head>
+    <body>
+        <h1>🌱 Seed Ejecutado en Render</h1>
+        <div class="box">
+            {''.join(resultados)}
+        </div>
+        <p style="margin-top: 20px;">
+            <a href="/" style="padding: 10px 20px; background: #0d6efd; color: white; text-decoration: none; border-radius: 5px;">Ir al Dashboard</a>
+            <a href="/metricas/" style="padding: 10px 20px; background: #6c757d; color: white; text-decoration: none; border-radius: 5px; margin-left: 10px;">Ver Metricas</a>
+        </p>
+        <p style="color: #dc3545; font-size: 12px; margin-top: 30px;">
+            ⚠️ <strong>Importante:</strong> Elimina este endpoint despues de usarlo para evitar que se ejecute multiples veces.
+        </p>
+    </body>
+    </html>
+    """
+    return HttpResponse(html)
