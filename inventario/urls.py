@@ -21,4 +21,5 @@ urlpatterns = [
     path('importar-equipos/', views.importar_equipos_excel, name='importar_equipos'),
     path('verificar-alertas/', views.verificar_alertas, name='verificar_alertas'),
     path('alertas/<int:pk>/leida/', views.marcar_alerta_leida, name='marcar_alerta_leida'),
+    path('manual/', views.manual_usuario, name='manual_usuario'),   # ← AGREGA ESTA
 ]

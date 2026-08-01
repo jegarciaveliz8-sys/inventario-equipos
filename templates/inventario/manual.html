@@ -1,0 +1,543 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+  .manual-container { max-width: 900px; margin: 0 auto; padding: 20px; font-size: 15px; line-height: 1.7; color: #333; }
+  .manual-header { text-align: center; padding: 30px 0; border-bottom: 3px solid #0d6efd; margin-bottom: 30px; }
+  .manual-header h1 { color: #2c3e50; font-size: 32px; margin-bottom: 8px; }
+  .manual-header .meta { color: #6c757d; font-size: 14px; }
+  .toc { background: #f8f9fa; border-radius: 8px; padding: 20px 25px; margin-bottom: 35px; border-left: 4px solid #0d6efd; }
+  .toc h3 { margin-top: 0; color: #0d6efd; font-size: 18px; }
+  .toc ul { columns: 2; column-gap: 40px; margin: 0; padding-left: 20px; }
+  .toc li { margin-bottom: 6px; }
+  .toc a { color: #0d6efd; text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  .section { margin-bottom: 40px; }
+  .section h2 { color: #2c3e50; font-size: 24px; border-bottom: 2px solid #e9ecef; padding-bottom: 10px; margin-top: 0; }
+  .section h3 { color: #34495e; font-size: 18px; margin-top: 25px; }
+  .section h4 { color: #495057; font-size: 16px; margin-top: 20px; }
+  .section p { margin: 10px 0; }
+  .section ul, .section ol { margin: 10px 0; padding-left: 25px; }
+  .section li { margin-bottom: 6px; }
+  .section table { width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 14px; }
+  .section th { background: #343a40; color: white; padding: 10px; text-align: left; font-weight: 600; }
+  .section td { border: 1px solid #dee2e6; padding: 10px; }
+  .section tr:nth-child(even) { background: #f8f9fa; }
+  .badge { display: inline-block; padding: 3px 10px; border-radius: 4px; font-size: 13px; font-weight: 600; }
+  .bg-primary { background: #0d6efd; color: white; }
+  .bg-success { background: #198754; color: white; }
+  .bg-info { background: #0dcaf0; color: #000; }
+  .bg-warning { background: #ffc107; color: #000; }
+  .bg-secondary { background: #6c757d; color: white; }
+  .bg-dark { background: #212529; color: white; }
+  .bg-danger { background: #dc3545; color: white; }
+  .tip-box { background: #e7f3ff; border-left: 4px solid #0d6efd; padding: 12px 15px; margin: 15px 0; border-radius: 0 6px 6px 0; }
+  .warning-box { background: #fff3cd; border-left: 4px solid #ffc107; padding: 12px 15px; margin: 15px 0; border-radius: 0 6px 6px 0; }
+  .danger-box { background: #f8d7da; border-left: 4px solid #dc3545; padding: 12px 15px; margin: 15px 0; border-radius: 0 6px 6px 0; }
+  .code-inline { background: #f4f4f4; padding: 2px 6px; border-radius: 3px; font-family: monospace; font-size: 13px; }
+  .step-list { counter-reset: step; list-style: none; padding-left: 0; }
+  .step-list li { counter-increment: step; margin-bottom: 12px; padding-left: 35px; position: relative; }
+  .step-list li::before { content: counter(step); position: absolute; left: 0; top: 0; background: #0d6efd; color: white; width: 24px; height: 24px; border-radius: 50%; text-align: center; line-height: 24px; font-size: 12px; font-weight: bold; }
+  .back-to-top { position: fixed; bottom: 20px; right: 20px; background: #0d6efd; color: white; padding: 10px 15px; border-radius: 50%; text-decoration: none; font-size: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); }
+  .back-to-top:hover { background: #0b5ed7; }
+  @media print { .back-to-top, .no-print { display: none; } .manual-container { max-width: 100%; padding: 0; } }
+  @media (max-width: 768px) { .toc ul { columns: 1; } .manual-header h1 { font-size: 24px; } }
+</style>
+
+<div class="manual-container" id="top">
+  <div class="manual-header">
+    <h1>📘 Manual de Usuario</h1>
+    <div class="meta">
+      <strong>Sistema de Inventario de Equipos Tecnológicos</strong><br>
+      Versión 2.0 &nbsp;|&nbsp; Agosto 2026 &nbsp;|&nbsp;
+      <a href="https://inventario-equipos-hkmd.onrender.com" target="_blank">inventario-equipos-hkmd.onrender.com</a>
+    </div>
+  </div>
+
+  <div class="toc">
+    <h3>📑 Índice</h3>
+    <ul>
+      <li><a href="#s1">1. Primeros pasos</a></li>
+      <li><a href="#s2">2. El Dashboard</a></li>
+      <li><a href="#s3">3. Gestión de Equipos</a></li>
+      <li><a href="#s4">4. Asignaciones a Personal</a></li>
+      <li><a href="#s5">5. Mantenimientos</a></li>
+      <li><a href="#s6">6. Licencias de Software</a></li>
+      <li><a href="#s7">7. Alertas del Sistema</a></li>
+      <li><a href="#s8">8. Reportes y Exportaciones</a></li>
+      <li><a href="#s9">9. Accesorios y Stock</a></li>
+      <li><a href="#s10">10. Evidencias Fotográficas</a></li>
+      <li><a href="#s11">11. Escaneo de Códigos QR</a></li>
+      <li><a href="#s12">12. Métricas y Estadísticas</a></li>
+      <li><a href="#s13">13. Roles de Usuario</a></li>
+      <li><a href="#s14">14. Flujos de trabajo</a></li>
+      <li><a href="#s15">15. Solución de problemas</a></li>
+    </ul>
+  </div>
+
+  <div class="section" id="s1">
+    <h2>1. Primeros pasos</h2>
+    <h3>1.1 Requisitos</h3>
+    <ul>
+      <li>Navegador web actualizado (Chrome, Firefox, Edge, Safari).</li>
+      <li>Conexión a internet.</li>
+      <li>Credenciales de acceso proporcionadas por el administrador.</li>
+    </ul>
+    <h3>1.2 Cómo ingresar</h3>
+    <ol class="step-list">
+      <li>Abre tu navegador y escribe la URL del sistema.</li>
+      <li>Haz clic en <strong>"Panel Admin"</strong> o ve directamente a <span class="code-inline">/admin/</span>.</li>
+      <li>Ingresa tu <strong>usuario</strong> y <strong>contraseña</strong>.</li>
+      <li>Haz clic en <strong>"Iniciar sesión"</strong>.</li>
+    </ol>
+    <div class="danger-box">
+      <strong>🔒 Seguridad:</strong> No compartas tu contraseña. Si la olvidas, contacta al administrador.
+    </div>
+    <h3>1.3 Cierre de sesión</h3>
+    <p>Haz clic en tu nombre de usuario (esquina superior derecha) y selecciona <strong>"Salir"</strong> o <strong>"Cerrar sesión"</strong>.</p>
+  </div>
+
+  <div class="section" id="s2">
+    <h2>2. El Dashboard</h2>
+    <p>El Dashboard es la pantalla principal. Proporciona una vista rápida del estado completo del inventario.</p>
+    <h3>2.1 KPIs principales (tarjetas superiores)</h3>
+    <table>
+      <tr><th>Tarjeta</th><th>Color</th><th>Significado</th></tr>
+      <tr><td><strong>Total Equipos</strong></td><td><span class="badge bg-primary">Azul</span></td><td>Cantidad total registrada.</td></tr>
+      <tr><td><strong>Disponibles</strong></td><td><span class="badge bg-success">Verde</span></td><td>Equipos listos para asignar.</td></tr>
+      <tr><td><strong>Asignados</strong></td><td><span class="badge bg-info">Celeste</span></td><td>Equipos entregados a personal.</td></tr>
+      <tr><td><strong>En Reparación</strong></td><td><span class="badge bg-warning">Amarillo</span></td><td>Equipos con fallas o en taller.</td></tr>
+      <tr><td><strong>Dados de Baja</strong></td><td><span class="badge bg-secondary">Gris</span></td><td>Equipos retirados del inventario.</td></tr>
+      <tr><td><strong>Costo Reparaciones</strong></td><td><span class="badge bg-dark">Negro</span></td><td>Dinero total gastado en reparaciones.</td></tr>
+    </table>
+    <h3>2.2 Gráficas</h3>
+    <ul>
+      <li><strong>Equipos por Estado:</strong> Gráfico circular con la distribución visual.</li>
+      <li><strong>Top Marcas:</strong> Gráfico de barras con las marcas más frecuentes.</li>
+      <li><strong>Equipos por Categoría:</strong> Gráfico circular con laptops, monitores, servidores, etc.</li>
+      <li><strong>Equipos por Ubicación:</strong> Gráfico de barras mostrando dónde están físicamente.</li>
+    </ul>
+    <h3>2.3 Paneles de alertas</h3>
+    <h4>⚠️ Alertas Pendientes</h4>
+    <p>Lista de notificaciones que requieren atención:</p>
+    <ul>
+      <li><strong>Garantía por vencer:</strong> El equipo perderá garantía pronto.</li>
+      <li><strong>Mantenimiento preventivo:</strong> Toca revisar el equipo.</li>
+      <li><strong>Stock bajo:</strong> Un accesorio está por agotarse.</li>
+      <li><strong>Revisión pendiente:</strong> Equipo asignado lleva más de 1 año sin revisión.</li>
+    </ul>
+    <div class="tip-box">✅ Para marcar una alerta como leída, haz clic en el botón <strong>"✓"</strong> a la derecha de cada alerta.</div>
+    <h4>📦 Stock Crítico</h4>
+    <p>Muestra accesorios cuya cantidad actual es igual o menor al mínimo permitido. Ejemplo: <span class="code-inline">Hub USB-C 1 / min 3</span> significa que solo queda 1 unidad y el mínimo es 3.</p>
+    <h4>🔑 Licencias por Vencer</h4>
+    <p>Software (Windows, Office, antivirus) cuya licencia expira en los próximos 30 días.</p>
+    <h4>🔧 Mantenimientos Próximos</h4>
+    <p>Lista de mantenimientos preventivos programados para esta semana.</p>
+    <h4>👤 Clientes con más Equipos</h4>
+    <p>Ranking de quién tiene más equipos asignados actualmente.</p>
+    <h4>🔴 Equipos con más Fallas</h4>
+    <p>Ranking de equipos que más veces han sido reparados.</p>
+  </div>
+
+  <div class="section" id="s3">
+    <h2>3. Gestión de Equipos</h2>
+    <h3>3.1 Crear un nuevo equipo</h3>
+    <ol class="step-list">
+      <li>Ve a <strong>Panel Admin → Inventario → Equipos → Añadir</strong>.</li>
+      <li>Completa los campos:
+        <ul>
+          <li><strong>Nombre:</strong> Descripción clara (ej: "Laptop Dell Latitude 5520").</li>
+          <li><strong>Categoría:</strong> Selecciona del listado (Laptop, Monitor, Servidor, etc.).</li>
+          <li><strong>Marca:</strong> Ej: Dell, HP, Lenovo.</li>
+          <li><strong>Modelo:</strong> Ej: Latitude 5520.</li>
+          <li><strong>Serial:</strong> Número de serie único (obligatorio, no se puede repetir).</li>
+          <li><strong>Descripción:</strong> Detalles adicionales.</li>
+          <li><strong>Ubicación:</strong> Dónde se encuentra físicamente.</li>
+          <li><strong>Fecha fin de garantía:</strong> Cuándo vence la garantía del fabricante.</li>
+          <li><strong>Foto:</strong> Imagen del equipo (opcional).</li>
+        </ul>
+      </li>
+      <li>Haz clic en <strong>"Guardar"</strong>.</li>
+    </ol>
+    <div class="tip-box">📝 El sistema genera automáticamente un <strong>UUID</strong> y un <strong>código QR</strong> para el equipo al guardar.</div>
+    <h3>3.2 Ver ficha de un equipo</h3>
+    <p>En el listado de equipos, haz clic en el nombre del equipo. Verás todos sus datos, historial de cambios, QR generado y estado actual.</p>
+    <h3>3.3 Cambiar estado de un equipo (FSM)</h3>
+    <p>El sistema usa un flujo de estados protegido. Desde el Admin, en la columna <strong>"Acciones"</strong> verás botones según el estado actual:</p>
+    <table>
+      <tr><th>Estado actual</th><th>Acciones disponibles</th></tr>
+      <tr><td><span class="badge bg-success">Disponible</span></td><td>Asignar, Dar de Baja</td></tr>
+      <tr><td><span class="badge bg-info">Asignado</span></td><td>Reportar Fallo</td></tr>
+      <tr><td><span class="badge bg-warning">En Reparación</span></td><td>Reparar, Dar de Baja</td></tr>
+      <tr><td><span class="badge bg-secondary">Dado de Baja</span></td><td>Ninguna (equipo retirado)</td></tr>
+    </table>
+    <div class="warning-box">⚠️ <strong>Importante:</strong> No puedes cambiar el estado manualmente escribiendo. Debes usar los botones de acción.</div>
+    <h3>3.4 Editar o eliminar</h3>
+    <ul>
+      <li><strong>Editar:</strong> Abre el equipo, modifica los campos y guarda.</li>
+      <li><strong>Eliminar:</strong> En la lista, selecciona el equipo, elige <strong>"Eliminar equipos seleccionados"</strong> en el menú desplegable y confirma.</li>
+    </ul>
+  </div>
+
+  <div class="section" id="s4">
+    <h2>4. Asignaciones a Personal</h2>
+    <h3>4.1 Asignar un equipo a una persona</h3>
+    <ol class="step-list">
+      <li>Asegúrate de que el equipo esté en estado <strong>"Disponible"</strong>.</li>
+      <li>Ve a <strong>Panel Admin → Inventario → Asignaciones → Añadir</strong>.</li>
+      <li>Selecciona:
+        <ul>
+          <li><strong>Equipo:</strong> El que vas a entregar.</li>
+          <li><strong>Cliente:</strong> La persona que recibirá el equipo.</li>
+          <li><strong>Ubicación física:</strong> Dónde usará el equipo.</li>
+          <li><strong>Observaciones:</strong> Condiciones especiales de entrega.</li>
+          <li><strong>Accesorios entregados:</strong> Mouse, teclado, mochila, etc.</li>
+        </ul>
+      </li>
+      <li>Guarda la asignación.</li>
+    </ol>
+    <div class="tip-box">✅ El sistema cambiará automáticamente el estado del equipo a <strong>"Asignado"</strong>.</div>
+    <h3>4.2 Generar Hoja de Responsabilidad</h3>
+    <p>Cuando creas una asignación, el sistema genera automáticamente una <strong>Hoja de Responsabilidad</strong>. Es un documento legal que indica que la persona se hace responsable del equipo.</p>
+    <p>Para firmarla digitalmente:</p>
+    <ol>
+      <li>Ve a la asignación y busca la sección <strong>"Hoja de Responsabilidad"</strong>.</li>
+      <li>Haz clic en <strong>"Firmar digitalmente"</strong>.</li>
+      <li>Dibuja tu firma en el canvas.</li>
+      <li>Guarda.</li>
+    </ol>
+    <h3>4.3 Devolver un equipo</h3>
+    <ol>
+      <li>Busca la asignación activa en <strong>Panel Admin → Asignaciones</strong>.</li>
+      <li>Abre la asignación.</li>
+      <li>El sistema marca la asignación como inactiva, registra la fecha de devolución y cambia el estado del equipo a <strong>"Disponible"</strong> automáticamente.</li>
+    </ol>
+  </div>
+
+  <div class="section" id="s5">
+    <h2>5. Mantenimientos</h2>
+    <h3>5.1 Mantenimiento Correctivo (Reparaciones)</h3>
+    <p>Usa esto cuando un equipo se daña o necesita una reparación puntual.</p>
+    <ol class="step-list">
+      <li>Ve a <strong>Panel Admin → Inventario → Cambios y Reparaciones → Añadir</strong>.</li>
+      <li>Completa:
+        <ul>
+          <li><strong>Equipo:</strong> El que se reparará.</li>
+          <li><strong>Tipo:</strong> Reparación, Cambio de Pieza, Actualización o Mantenimiento.</li>
+          <li><strong>Descripción:</strong> Qué le pasó al equipo y qué se hizo.</li>
+          <li><strong>Técnico:</strong> Quién realizó la reparación.</li>
+          <li><strong>Costo:</strong> Cuánto costó (en Quetzales).</li>
+        </ul>
+      </li>
+      <li>Guarda.</li>
+    </ol>
+    <div class="tip-box">💡 <strong>Tip:</strong> Si el costo es alto, el equipo aparecerá en el ranking de "Equipos con más Fallas".</div>
+
+    <h3>5.2 Mantenimiento Preventivo</h3>
+    <p>Programa revisiones periódicas para evitar fallas.</p>
+    <ol class="step-list">
+      <li>Ve a <strong>Panel Admin → Inventario → Mantenimientos Preventivos → Añadir</strong>.</li>
+      <li>Completa:
+        <ul>
+          <li><strong>Equipo:</strong> A quién se le hará mantenimiento.</li>
+          <li><strong>Título:</strong> Ej: "Limpieza interna y cambio de pasta térmica".</li>
+          <li><strong>Frecuencia:</strong> Semanal, Mensual, Trimestral, Semestral o Anual.</li>
+          <li><strong>Última realización:</strong> Fecha en que se hizo por última vez (si aplica).</li>
+          <li><strong>Técnico:</strong> Responsable.</li>
+        </ul>
+      </li>
+      <li>Guarda.</li>
+    </ol>
+    <div class="tip-box">🔄 El sistema calcula automáticamente la <strong>próxima fecha</strong> de mantenimiento según la frecuencia.</div>
+
+    <h3>5.3 Completar un mantenimiento preventivo</h3>
+    <ol class="step-list">
+      <li>Ve al listado de mantenimientos preventivos.</li>
+      <li>Selecciona los que ya se realizaron.</li>
+      <li>En el menú desplegable superior elige <strong>"Marcar mantenimientos seleccionados como completados"</strong>.</li>
+      <li>El sistema actualizará la última fecha y calculará la siguiente automáticamente.</li>
+    </ol>
+  </div>
+
+  <div class="section" id="s6">
+    <h2>6. Licencias de Software</h2>
+    <p>Controla las licencias de cada equipo (Windows, Office, antivirus, etc.).</p>
+    <h3>6.1 Registrar una licencia</h3>
+    <ol class="step-list">
+      <li>Ve a <strong>Panel Admin → Inventario → Licencias de Software → Añadir</strong>.</li>
+      <li>Completa:
+        <ul>
+          <li><strong>Equipo:</strong> A qué computadora pertenece.</li>
+          <li><strong>Tipo:</strong> Sistema Operativo, Office, Antivirus, CAD, Base de Datos, Otro.</li>
+          <li><strong>Nombre:</strong> Ej: "Windows 11 Pro".</li>
+          <li><strong>Clave/Licencia:</strong> El serial de activación.</li>
+          <li><strong>Fecha inicio:</strong> Cuándo se activó.</li>
+          <li><strong>Fecha vencimiento:</strong> Cuándo expira.</li>
+          <li><strong>Costo:</strong> Precio de la licencia.</li>
+        </ul>
+      </li>
+      <li>Guarda.</li>
+    </ol>
+    <h3>6.2 Ver licencias por vencer</h3>
+    <ul>
+      <li>En el <strong>Dashboard</strong> aparecen las que vencen en 30 días.</li>
+      <li>O visita <strong>Menú → Licencias</strong> para ver el listado completo: Activas, Por Vencer y Vencidas.</li>
+    </ul>
+  </div>
+
+  <div class="section" id="s7">
+    <h2>7. Alertas del Sistema</h2>
+    <p>Las alertas se generan automáticamente. Para actualizarlas:</p>
+    <ol class="step-list">
+      <li>Ve al <strong>Dashboard</strong>.</li>
+      <li>Haz clic en el botón <strong>"Verificar"</strong> dentro del panel de Alertas Pendientes.</li>
+      <li>El sistema revisará:
+        <ul>
+          <li>Garantías por vencer (30 días).</li>
+          <li>Stock bajo.</li>
+          <li>Revisiones anuales pendientes.</li>
+          <li>Licencias por vencer.</li>
+          <li>Mantenimientos preventivos próximos.</li>
+        </ul>
+      </li>
+      <li>Las nuevas alertas aparecerán en la lista.</li>
+    </ol>
+    <h3>7.1 Marcar alerta como leída</h3>
+    <ul>
+      <li>En el Dashboard, haz clic en <strong>"✓"</strong> junto a cada alerta.</li>
+      <li>O ve a <strong>Panel Admin → Inventario → Alertas</strong>, selecciona las que ya atendiste y usa <strong>"Marcar alertas seleccionadas como leídas"</strong>.</li>
+    </ul>
+  </div>
+
+  <div class="section" id="s8">
+    <h2>8. Reportes y Exportaciones</h2>
+    <h3>8.1 Reporte de equipos (PDF o Excel)</h3>
+    <ol class="step-list">
+      <li>Ve al menú <strong>"📊 Reportes"</strong> o visita <span class="code-inline">/reportes/equipos/</span>.</li>
+      <li>Aplica filtros si necesitas:
+        <ul>
+          <li>Marca.</li>
+          <li>Estado (disponible, asignado, etc.).</li>
+          <li>Categoría.</li>
+          <li>Ubicación.</li>
+          <li>Rango de fechas.</li>
+        </ul>
+      </li>
+      <li>Haz clic en:
+        <ul>
+          <li><strong>"Exportar PDF"</strong> para descargar un documento formal.</li>
+          <li><strong>"Exportar Excel"</strong> para descargar una hoja de cálculo editable.</li>
+        </ul>
+      </li>
+    </ol>
+    <h3>8.2 Reporte de evidencias (PDF)</h3>
+    <ol class="step-list">
+      <li>Ve a un equipo específico.</li>
+      <li>Si tiene evidencias fotográficas, busca la opción de generar reporte PDF.</li>
+      <li>Descarga el documento con todas las fotos y detalles.</li>
+    </ol>
+  </div>
+
+  <div class="section" id="s9">
+    <h2>9. Accesorios y Stock</h2>
+    <h3>9.1 Registrar un accesorio</h3>
+    <ol class="step-list">
+      <li>Ve a <strong>Panel Admin → Inventario → Accesorios → Añadir</strong>.</li>
+      <li>Completa:
+        <ul>
+          <li><strong>Nombre:</strong> Ej: "Mouse Logitech".</li>
+          <li><strong>Descripción:</strong> Detalles.</li>
+          <li><strong>Cantidad:</strong> Cuántas unidades hay en bodega.</li>
+          <li><strong>Stock mínimo:</strong> Cantidad mínima antes de generar alerta.</li>
+        </ul>
+      </li>
+      <li>Guarda.</li>
+    </ol>
+    <h3>9.2 Revisar stock crítico</h3>
+    <ul>
+      <li>Aparece automáticamente en el Dashboard.</li>
+      <li>O ve <strong>Panel Admin → Inventario → Accesorios</strong>. Los que están en rojo indican stock bajo.</li>
+    </ul>
+    <h3>9.3 Actualizar cantidad</h3>
+    <ol class="step-list">
+      <li>Abre el accesorio.</li>
+      <li>Cambia el campo <strong>"Cantidad"</strong>.</li>
+      <li>Guarda.</li>
+    </ol>
+  </div>
+
+  <div class="section" id="s10">
+    <h2>10. Evidencias Fotográficas</h2>
+    <p>Sube fotos de entregas, reparaciones o estado de equipos.</p>
+    <h3>10.1 Subir evidencia</h3>
+    <ol class="step-list">
+      <li>Ve al menú <strong>"📸 Evidencia"</strong> o visita <span class="code-inline">/evidencia/subir/</span>.</li>
+      <li>Selecciona:
+        <ul>
+          <li><strong>Equipo:</strong> A qué equipo pertenece la foto.</li>
+          <li><strong>Tipo:</strong> Entrega, Devolución, Reparación, Mantenimiento Preventivo o General.</li>
+          <li><strong>Descripción:</strong> Breve texto.</li>
+          <li><strong>Imagen:</strong> Archivo JPG o PNG.</li>
+        </ul>
+      </li>
+      <li>Haz clic en <strong>"Subir"</strong>.</li>
+    </ol>
+    <h3>10.2 Ver evidencias de un equipo</h3>
+    <ol class="step-list">
+      <li>Ve a la ficha pública del equipo (escaneando el QR o buscándolo).</li>
+      <li>En la sección "Evidencias" verás todas las fotos subidas.</li>
+    </ol>
+  </div>
+
+  <div class="section" id="s11">
+    <h2>11. Escaneo de Códigos QR</h2>
+    <p>Cada equipo tiene un código QR único que lleva a su ficha pública.</p>
+    <h3>11.1 Ver el QR de un equipo</h3>
+    <ol class="step-list">
+      <li>Ve a <strong>Panel Admin → Inventario → Equipos</strong>.</li>
+      <li>Abre un equipo.</li>
+      <li>En la sección <strong>"Código QR"</strong> verás la imagen.</li>
+      <li>Haz clic para verla en tamaño completo.</li>
+    </ol>
+    <h3>11.2 Escanear con celular</h3>
+    <ol class="step-list">
+      <li>Ve al menú <strong>"📷 Escanear QR"</strong> o visita <span class="code-inline">/escanear-qr/</span>.</li>
+      <li>Permite el acceso a la cámara.</li>
+      <li>Apunta al código QR del equipo.</li>
+      <li>Automáticamente se abrirá la ficha pública.</li>
+    </ol>
+    <h3>11.3 Ficha pública del equipo</h3>
+    <p>Al escanear el QR o visitar la URL directa, cualquier persona puede ver:</p>
+    <ul>
+      <li>Nombre, marca, modelo, serial.</li>
+      <li>Estado actual.</li>
+      <li>Quién lo tiene asignado (si aplica).</li>
+      <li>Historial de reparaciones.</li>
+      <li>Licencias de software.</li>
+      <li>Mantenimientos preventivos pendientes.</li>
+      <li>Evidencias fotográficas.</li>
+      <li>Historial de cambios (auditoría).</li>
+    </ul>
+  </div>
+
+  <div class="section" id="s12">
+    <h2>12. Métricas y Estadísticas</h2>
+    <p>Visita <strong>"📈 Métricas"</strong> o <span class="code-inline">/metricas/</span> para ver estadísticas avanzadas:</p>
+    <h3>12.1 KPIs superiores</h3>
+    <ul>
+      <li>Total de reparaciones.</li>
+      <li>Costo total gastado.</li>
+      <li>Licencias por vencer.</li>
+      <li>Licencias vencidas.</li>
+    </ul>
+    <h3>12.2 Gráficas</h3>
+    <ul>
+      <li><strong>Costo por tipo de reparación:</strong> ¿En qué se gasta más?</li>
+      <li><strong>Equipos por categoría:</strong> Distribución visual.</li>
+      <li><strong>Equipos por ubicación:</strong> Dónde está concentrado el inventario.</li>
+      <li><strong>Equipos por estado:</strong> Disponibles vs asignados vs reparación.</li>
+    </ul>
+    <h3>12.3 Tablas de ranking</h3>
+    <ul>
+      <li><strong>Clientes con más equipos:</strong> Quién tiene más asignado.</li>
+      <li><strong>Equipos con más fallas:</strong> Cuáles son los más problemáticos.</li>
+    </ul>
+  </div>
+
+  <div class="section" id="s13">
+    <h2>13. Roles de Usuario</h2>
+    <p>El sistema tiene roles principales configurados:</p>
+    <table>
+      <tr><th>Rol</th><th>Permisos</th></tr>
+      <tr><td><span class="badge bg-dark">Administrador</span></td><td>Acceso total: crear, editar, eliminar todo. Ver métricas. Administrar usuarios.</td></tr>
+      <tr><td><span class="badge bg-primary">Coordinador</span></td><td>Crear y editar equipos, asignaciones, mantenimientos. Ver reportes. No eliminar.</td></tr>
+      <tr><td><span class="badge bg-info">Técnico</span></td><td>Registrar reparaciones, completar mantenimientos preventivos, subir evidencias. Ver equipos.</td></tr>
+      <tr><td><span class="badge bg-secondary">Auditor</span></td><td>Solo lectura. Puede ver todo pero no modificar. Ideal para revisiones de contabilidad.</td></tr>
+    </table>
+    <div class="tip-box">👤 Para asignar un rol, ve a <strong>Panel Admin → Autenticación → Usuarios</strong>, edita el usuario y agrégalo al grupo correspondiente.</div>
+  </div>
+
+  <div class="section" id="s14">
+    <h2>14. Flujos de trabajo recomendados</h2>
+    <h3>14.1 Cuando compras un equipo nuevo</h3>
+    <ol class="step-list">
+      <li>Admin → Equipos → Añadir.</li>
+      <li>Completa todos los campos (nombre, categoría, marca, modelo, serial, ubicación, garantía).</li>
+      <li>Sube foto si tienes.</li>
+      <li>Guarda. El sistema genera QR automáticamente.</li>
+      <li>Imprime el QR y pégalo en el equipo físico.</li>
+    </ol>
+    <h3>14.2 Cuando entregas un equipo a un empleado</h3>
+    <ol class="step-list">
+      <li>Asegúrate de que el equipo esté <strong>"Disponible"</strong>.</li>
+      <li>Admin → Asignaciones → Añadir.</li>
+      <li>Selecciona equipo, cliente, ubicación física y accesorios entregados.</li>
+      <li>Guarda. El estado cambia a <strong>"Asignado"</strong> automáticamente.</li>
+      <li>Genera la Hoja de Responsabilidad.</li>
+      <li>Haz que el empleado firme digitalmente.</li>
+      <li>Entrega el equipo físico.</li>
+    </ol>
+    <h3>14.3 Cuando un equipo se daña</h3>
+    <ol class="step-list">
+      <li>Admin → Cambios y Reparaciones → Añadir.</li>
+      <li>Registra el equipo, tipo de falla, descripción y técnico.</li>
+      <li>Si el equipo está asignado, reporta el fallo para cambiar su estado a <strong>"En Reparación"</strong>.</li>
+      <li>Cuando esté reparado, usa <strong>"Reparar"</strong> en el equipo para volverlo <strong>"Disponible"</strong>.</li>
+    </ol>
+    <h3>14.4 Cuando un equipo ya no sirve</h3>
+    <ol class="step-list">
+      <li>Abre el equipo en el Admin.</li>
+      <li>Asegúrate de que esté <strong>"Disponible"</strong> o <strong>"En Reparación"</strong>.</li>
+      <li>Usa la acción <strong>"Dar de Baja"</strong>.</li>
+      <li>El equipo pasará a estado <strong>"Dado de Baja"</strong> y ya no aparecerá como disponible.</li>
+    </ol>
+    <h3>14.5 Revisión semanal recomendada (Lunes)</h3>
+    <ol class="step-list">
+      <li>Abre el <strong>Dashboard</strong>.</li>
+      <li>Revisa <strong>Alertas Pendientes</strong>.</li>
+      <li>Revisa <strong>Stock Crítico</strong>.</li>
+      <li>Revisa <strong>Mantenimientos Próximos</strong>.</li>
+      <li>Haz clic en <strong>"Verificar"</strong> para actualizar alertas.</li>
+      <li>Atiende lo urgente.</li>
+    </ol>
+  </div>
+
+  <div class="section" id="s15">
+    <h2>15. Solución de problemas</h2>
+    <h3>15.1 "No puedo cambiar el estado de un equipo"</h3>
+    <p><strong>Causa:</strong> El sistema usa FSM (máquina de estados). No puedes escribir el estado directamente.</p>
+    <p><strong>Solución:</strong> Usa los botones de acción en la columna "Acciones" del listado de equipos.</p>
+    <h3>15.2 "No aparece el QR de un equipo"</h3>
+    <p><strong>Causa:</strong> El QR se genera al guardar, pero a veces hay error de URL.</p>
+    <p><strong>Solución:</strong> Ve a <span class="code-inline">config/settings.py</span> y verifica que <span class="code-inline">SITE_URL</span> esté configurado correctamente.</p>
+    <h3>15.3 "Las gráficas del Dashboard no cargan"</h3>
+    <p><strong>Causa:</strong> Problema de conexión a internet o bloqueo de scripts.</p>
+    <p><strong>Solución:</strong> Recarga la página (F5). Asegúrate de no tener bloqueadores de JavaScript.</p>
+    <h3>15.4 "No puedo asignar un equipo"</h3>
+    <p><strong>Causa:</strong> El equipo no está en estado "Disponible".</p>
+    <p><strong>Solución:</strong> Verifica el estado. Si está "Asignado", "En Reparación" o "Dado de Baja", no se puede asignar hasta que vuelva a "Disponible".</p>
+    <h3>15.5 "Las alertas no se actualizan"</h3>
+    <p><strong>Causa:</strong> Las alertas no se generan solas en tiempo real.</p>
+    <p><strong>Solución:</strong> Ve al Dashboard y haz clic en <strong>"Verificar"</strong> en el panel de Alertas Pendientes.</p>
+    <h3>15.6 "Error al generar PDF"</h3>
+    <p><strong>Causa:</strong> Falta la librería <span class="code-inline">xhtml2pdf</span> o la plantilla HTML.</p>
+    <p><strong>Solución:</strong> Verifica que <span class="code-inline">xhtml2pdf</span> esté en <span class="code-inline">requirements.txt</span> y que exista la carpeta <span class="code-inline">templates/reportes/</span>.</p>
+    <h3>15.7 "No puedo subir imágenes"</h3>
+    <p><strong>Causa:</strong> Configuración de <span class="code-inline">MEDIA_ROOT</span> o permisos de carpeta.</p>
+    <p><strong>Solución:</strong> Verifica que exista la carpeta <span class="code-inline">media/</span> y que el servidor tenga permisos de escritura.</p>
+    <h3>📞 Soporte</h3>
+    <p>Si encuentras un error que no está en esta lista:</p>
+    <ol class="step-list">
+      <li>Toma una captura de pantalla del error.</li>
+      <li>Anota los pasos que seguiste antes de que ocurriera.</li>
+      <li>Contacta al administrador del sistema con esa información.</li>
+    </ol>
+  </div>
+
+  <div style="text-align: center; margin-top: 50px; padding: 30px; border-top: 2px solid #e9ecef; color: #6c757d; font-size: 14px;">
+    <p><strong>Fin del manual</strong> — Sistema de Inventario de Equipos Tecnológicos v2.0</p>
+    <p>Plataforma: Django + Render | URL: <a href="https://inventario-equipos-hkmd.onrender.com">inventario-equipos-hkmd.onrender.com</a></p>
+  </div>
+
+  <a href="#top" class="back-to-top no-print">↑</a>
+</div>
+{% endblock %}

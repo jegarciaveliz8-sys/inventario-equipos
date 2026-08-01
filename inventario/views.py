@@ -638,3 +638,10 @@ def seed_licencias_mantenimientos_web(request):
     </html>
     """
     return HttpResponse(html)
+
+
+# ========== 18. MANUAL DE USUARIO ==========
+
+def manual_usuario(request):
+    """Renderiza el Manual de Usuario del sistema."""
+    return render(request, 'inventario/manual.html')
