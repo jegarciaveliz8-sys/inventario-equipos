@@ -733,3 +733,113 @@ def asignar_defaults_produccion(request):
     </body>
     </html>
     """)
+
+
+def auto_clasificar_equipos(request):
+    """Endpoint para clasificar automáticamente equipos por nombre/marca/modelo."""
+    TOKEN = "autoclass2024"
+    if request.GET.get("token") != TOKEN:
+        return HttpResponse("Acceso no autorizado", status=403)
+    
+    from .models import Equipo, Categoria, Ubicacion
+    
+    # ========== 1. CREAR CATEGORÍAS ==========
+    categorias_map = {
+        "Laptop": ["laptop", "notebook", "portatil", "ultrabook"],
+        "Desktop": ["desktop", "pc", "computadora", "torre", "all-in-one", "all in one"],
+        "Monitor": ["monitor", "pantalla", "display", "lcd", "led", "hdmi"],
+        "Impresora": ["impresora", "printer", "multifuncional", "scanner", "escaner"],
+        "Servidor": ["servidor", "server", "nas", "rack"],
+        "Red": ["router", "switch", "access point", "ap", "hub", "firewall", "modem"],
+        "Periferico": ["mouse", "teclado", "keyboard", "webcam", "auricular", "headset", "parlante", "microfono", "cable", "adaptador", "dock", "hub usb"],
+        "Almacenamiento": ["disco duro", "hdd", "ssd", "usb", "pendrive", "memoria", "tarjeta sd"],
+        "UPS": ["ups", "bateria", "regulador", "no break", "nobreak"],
+    }
+    
+    categoria_objs = {}
+    for nombre_cat, _ in categorias_map.items():
+        obj, _ = Categoria.objects.get_or_create(
+            nombre=nombre_cat,
+            defaults={"descripcion": f"Equipos tipo {nombre_cat}"}
+        )
+        categoria_objs[nombre_cat] = obj
+    
+    cat_general, _ = Categoria.objects.get_or_create(nombre="General")
+    
+    # ========== 2. CREAR UBICACIONES ==========
+    ubicaciones_data = [
+        ("Oficina Principal", "Coordinador IT", True),
+        ("Sala de Servidores", "Admin Sistemas", True),
+        ("Bodega", "Almacen", True),
+        ("Recepcion", "Recepcionista", True),
+    ]
+    
+    ubicacion_objs = {}
+    for nombre_ubi, resp, activa in ubicaciones_data:
+        obj, _ = Ubicacion.objects.get_or_create(
+            nombre=nombre_ubi,
+            defaults={"responsable": resp, "activa": activa}
+        )
+        ubicacion_objs[nombre_ubi] = obj
+    
+    # ========== 3. CLASIFICAR EQUIPOS ==========
+    equipos = Equipo.objects.all()
+    resultados = []
+    
+    for eq in equipos:
+        texto = f"{eq.nombre} {eq.marca} {eq.modelo} {eq.descripcion or ''}".lower()
+        
+        cat_asignada = None
+        for cat_nombre, palabras in categorias_map.items():
+            if any(palabra in texto for palabra in palabras):
+                cat_asignada = categoria_objs[cat_nombre]
+                break
+        
+        if not cat_asignada:
+            cat_asignada = cat_general
+        
+        if cat_asignada.nombre == "Servidor":
+            ubi_asignada = ubicacion_objs["Sala de Servidores"]
+        elif cat_asignada.nombre in ["Almacenamiento", "UPS"]:
+            ubi_asignada = ubicacion_objs["Bodega"]
+        elif cat_asignada.nombre == "Red":
+            ubi_asignada = ubicacion_objs["Sala de Servidores"]
+        else:
+            ubi_asignada = ubicacion_objs["Oficina Principal"]
+        
+        cambios = []
+        if eq.categoria_id != cat_asignada.id:
+            eq.categoria = cat_asignada
+            cambios.append(f"cat: {cat_asignada.nombre}")
+        if eq.ubicacion_id != ubi_asignada.id:
+            eq.ubicacion = ubi_asignada
+            cambios.append(f"ubi: {ubi_asignada.nombre}")
+        
+        if cambios:
+            eq.save(update_fields=['categoria', 'ubicacion'])
+            resultados.append(f"<tr><td>{eq.nombre}</td><td>{eq.marca}</td><td>{' | '.join(cambios)}</td></tr>")
+    
+    html_rows = ''.join(resultados) if resultados else '<tr><td colspan="3">Todos los equipos ya estaban clasificados</td></tr>'
+    
+    return HttpResponse(f"""
+    <!DOCTYPE html>
+    <html>
+    <head><title>Clasificación Automática</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; max-width: 900px; margin: 40px auto; padding: 20px; }}
+        h1 {{ color: #2c3e50; }}
+        table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
+        th {{ background: #0d6efd; color: white; padding: 10px; text-align: left; }}
+        td {{ border: 1px solid #dee2e6; padding: 10px; }}
+        tr:nth-child(even) {{ background: #f8f9fa; }}
+        .ok {{ color: #198754; font-weight: bold; }}
+        .btn {{ padding: 10px 20px; background: #0d6efd; color: white; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px; margin-right: 10px; }}
+    </style></head>
+    <body>
+        <h1>✅ Clasificación automática completada</h1>
+        <p class="ok">{len(resultados)} equipos clasificados automáticamente.</p>
+        <table><tr><th>Equipo</th><th>Marca</th><th>Cambios aplicados</th></tr>{html_rows}</table>
+        <a href="/" class="btn">Ir al Dashboard</a>
+        <a href="/admin/inventario/equipo/" class="btn" style="background: #6c757d;">Revisar en Admin</a>
+    </body></html>
+    """)
