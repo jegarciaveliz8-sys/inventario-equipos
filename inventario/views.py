@@ -676,6 +676,7 @@ def manual_usuario(request):
     """Renderiza el Manual de Usuario del sistema."""
     return render(request, 'inventario/manual.html')
 
+
 def asignar_defaults_produccion(request):
     """Endpoint temporal para asignar categoría/ubicación por defecto a equipos sin clasificar."""
     TOKEN = "fixprod2024"
@@ -684,12 +685,19 @@ def asignar_defaults_produccion(request):
     
     from .models import Equipo, Categoria, Ubicacion
     
-    default_cat = Categoria.objects.first()
-    default_ubi = Ubicacion.objects.filter(activa=True).first()
+    # Crear categoría por defecto si no existe
+    default_cat, cat_created = Categoria.objects.get_or_create(
+        nombre="General",
+        defaults={"descripcion": "Categoria por defecto para equipos sin clasificar"}
+    )
     
-    if not default_cat or not default_ubi:
-        return HttpResponse("<h1>❌ Error: Crea al menos una Categoría y una Ubicación en el Admin primero</h1>", status=400)
+    # Crear ubicación por defecto si no existe
+    default_ubi, ubi_created = Ubicacion.objects.get_or_create(
+        nombre="Oficina Principal",
+        defaults={"responsable": "Administrador", "activa": True}
+    )
     
+    # Asignar a equipos huérfanos
     equipos_sin_cat = Equipo.objects.filter(categoria__isnull=True)
     equipos_sin_ubi = Equipo.objects.filter(ubicacion__isnull=True)
     
@@ -697,9 +705,31 @@ def asignar_defaults_produccion(request):
     count_ubi = equipos_sin_ubi.update(ubicacion=default_ubi)
     
     return HttpResponse(f"""
-    <h1>✅ Defaults asignados</h1>
-    <p><strong>{count_cat}</strong> equipos con categoría asignada: <em>{default_cat.nombre}</em></p>
-    <p><strong>{count_ubi}</strong> equipos con ubicación asignada: <em>{default_ubi.nombre}</em></p>
-    <p style="color:#dc3545;"><strong>⚠️ Importante:</strong> Ahora entra al Admin y cambia las categorías/ubicaciones a los valores correctos.</p>
-    <a href="/admin/inventario/equipo/" style="padding:10px 20px;background:#0d6efd;color:white;text-decoration:none;border-radius:5px;">Ir al Admin</a>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Fix Completado</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }}
+            .box {{ background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #198754; }}
+            .btn {{ padding: 10px 20px; background: #0d6efd; color: white; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 15px; margin-right: 10px; }}
+            .warn {{ color: #dc3545; margin-top: 20px; }}
+        </style>
+    </head>
+    <body>
+        <h1>✅ Defaults asignados en producción</h1>
+        <div class="box">
+            <p><strong>Categoría:</strong> <em>{default_cat.nombre}</em> {'(creada)' if cat_created else '(ya existía)'}</p>
+            <p><strong>Ubicación:</strong> <em>{default_ubi.nombre}</em> {'(creada)' if ubi_created else '(ya existía)'}</p>
+            <hr>
+            <p><strong>{count_cat}</strong> equipos con categoría asignada</p>
+            <p><strong>{count_ubi}</strong> equipos con ubicación asignada</p>
+        </div>
+        <p class="warn">
+            ⚠️ <strong>Importante:</strong> Entra al Admin y cambia las categorías/ubicaciones a los valores correctos para cada equipo.
+        </p>
+        <a href="/admin/inventario/equipo/" class="btn">Ir al Admin → Equipos</a>
+        <a href="/" class="btn" style="background: #6c757d;">Ir al Dashboard</a>
+    </body>
+    </html>
     """)
