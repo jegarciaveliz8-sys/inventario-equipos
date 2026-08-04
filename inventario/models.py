@@ -1,5 +1,7 @@
 import uuid
 import qrcode
+import cloudinary
+import cloudinary.uploader
 from io import BytesIO
 from django.db import models
 from django.core.files.base import ContentFile
@@ -10,7 +12,7 @@ from django_fsm import FSMField, transition
 from simple_history.models import HistoricalRecords
 from datetime import timedelta
 from dateutil.relativedelta import relativedelta
-
+from cloudinary.models import CloudinaryField  # ← AGREGAR ESTA LÍNEA
 
 def path_firma(instance, filename):
     return f"firmas/{uuid.uuid4()}.png"
@@ -136,10 +138,10 @@ class MantenimientoPreventivo(models.Model):
         return None
 
     def save(self, *args, **kwargs):
-        if self.ultima_fecha and not self.proxima_fecha:
-            self.proxima_fecha = self.calcular_proxima_fecha()
+        # Solo generar QR si es nuevo o no tiene qr_code
+        if not self.pk or not self.qr_code:
+            self.generar_qr()
         super().save(*args, **kwargs)
-
     def esta_vencido(self):
         if self.proxima_fecha:
             return self.proxima_fecha < timezone.now().date()
@@ -172,7 +174,7 @@ class Equipo(models.Model):
     fecha_registro = models.DateTimeField(auto_now_add=True)
     fecha_fin_garantia = models.DateField(blank=True, null=True)
     foto = models.ImageField(upload_to='equipos/', blank=True, null=True)
-    qr_code = models.ImageField(upload_to='qrs/', blank=True, null=True)
+    qr_code = CloudinaryField('qr_code', folder='inventario/qrs', blank=True, null=True)
     history = HistoricalRecords()
 
     class Meta:
@@ -201,9 +203,19 @@ class Equipo(models.Model):
         qr = qrcode.make(url, box_size=10, border=2)
         buffer = BytesIO()
         qr.save(buffer, format='PNG')
-        filename = f'qr_{self.serial}.png'
-        self.qr_code.save(filename, ContentFile(buffer.getvalue()), save=False)
-
+        buffer.seek(0)
+        
+        # Subir a Cloudinary
+        result = cloudinary.uploader.upload(
+            buffer,
+            folder='inventario/qrs',
+            public_id=f'qr_{self.serial or str(self.uuid)[:8]}',
+            overwrite=True,
+            resource_type='image'
+        )
+        
+        # Guardar public_id de Cloudinary
+        self.qr_code = result['public_id']
     def save(self, *args, **kwargs):
         if not self.qr_code:
             self.generar_qr()

@@ -64,3 +64,5 @@ webencodings==0.5.1
 whitenoise==6.12.0
 xhtml2pdf==0.2.17
 zopfli==0.4.3
+cloudinary==1.45.0
+django-cloudinary-storage==0.3.0
