@@ -44,10 +44,11 @@ class DashboardView(TemplateView):
         ctx['total_alertas'] = Alerta.objects.filter(leida=False).count()
         ctx['stock_bajo'] = [a for a in Accesorio.objects.all() if a.stock_bajo()]
         ctx['ubicaciones'] = Ubicacion.objects.filter(activa=True).annotate(
-            num_equipos=Count('equipos')
+            num_equipos=Count('equipos')  # ✅ equipo (singular)
         ).order_by('-num_equipos')[:6]
+
         ctx['categorias'] = Categoria.objects.annotate(
-            num_equipos=Count('equipos')
+            num_equipos=Count('equipos')  # ✅ equipo (singular)
         ).order_by('-num_equipos')[:6]
         ctx['licencias_por_vencer'] = SoftwareLicencia.objects.filter(
             activa=True,

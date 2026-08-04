@@ -32,3 +32,9 @@ venv/
 staticfiles/
 media/
 seed_*.py
+__pycache__/
+*.pyc
+*.pyo
+db.sqlite3
+venv/
+.env
