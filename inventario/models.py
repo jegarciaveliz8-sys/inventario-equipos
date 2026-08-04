@@ -138,9 +138,6 @@ class MantenimientoPreventivo(models.Model):
         return None
 
     def save(self, *args, **kwargs):
-        # Solo generar QR si es nuevo o no tiene qr_code
-        if not self.pk or not self.qr_code:
-            self.generar_qr()
         super().save(*args, **kwargs)
     def esta_vencido(self):
         if self.proxima_fecha:
