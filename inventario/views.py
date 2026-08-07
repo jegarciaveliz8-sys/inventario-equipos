@@ -286,10 +286,28 @@ def subir_evidencia(request):
 @staff_member_required
 def generar_pdf_hoja(request, pk):
     hoja = get_object_or_404(HojaResponsabilidad, pk=pk)
+    equipo = hoja.asignacion.equipo if hoja.asignacion else None
+    
+    # Obtener QR como base64 para el PDF (xhtml2pdf no carga URLs externas)
+    qr_base64 = None
+    if equipo and equipo.qr_code:
+        try:
+            import requests
+            import base64
+            img_url = equipo.qr_code.url
+            response = requests.get(img_url, timeout=10)
+            if response.status_code == 200:
+                ext = img_url.split('.')[-1].split('?')[0] if '.' in img_url else 'png'
+                if ext not in ['png', 'jpg', 'jpeg', 'gif']:
+                    ext = 'png'
+                qr_base64 = f"data:image/{ext};base64,{base64.b64encode(response.content).decode()}"
+        except Exception:
+            qr_base64 = None
+    
     html_string = render_to_string('reportes/hoja_responsabilidad.html', {
         'hoja': hoja, 'asignacion': hoja.asignacion,
-        'equipo': hoja.asignacion.equipo, 'cliente': hoja.asignacion.cliente,
-        'fecha': timezone.now(),
+        'equipo': equipo, 'cliente': hoja.asignacion.cliente if hoja.asignacion else None,
+        'fecha': timezone.now(), 'qr_base64': qr_base64,
     })
     pdf_buffer = BytesIO()
     pisa_status = pisa.CreatePDF(html_string, dest=pdf_buffer)
@@ -297,7 +315,7 @@ def generar_pdf_hoja(request, pk):
         return HttpResponse("Error generando PDF", status=500)
     pdf_buffer.seek(0)
     response = HttpResponse(pdf_buffer, content_type='application/pdf')
-    response['Content-Disposition'] = f'inline; filename=hoja_{hoja.asignacion.equipo.serial}.pdf'
+    response['Content-Disposition'] = f'inline; filename=hoja_{equipo.serial if equipo else hoja.id}.pdf'
     return response
 
 
