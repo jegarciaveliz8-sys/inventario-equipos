@@ -186,7 +186,26 @@ class CambioReparacionAdmin(SimpleHistoryAdmin):
 class HojaResponsabilidadAdmin(SimpleHistoryAdmin):
     list_display = ['asignacion', 'firmado', 'fecha_generacion', 'fecha_firma']
     list_filter = ['firmado']
-    readonly_fields = ['uuid']
+    readonly_fields = ['uuid', 'qr_equipo_preview', 'firma_preview']
+    
+    def qr_equipo_preview(self, obj):
+        equipo = obj.asignacion.equipo if obj.asignacion else None
+        if equipo and equipo.qr_code:
+            return format_html(
+                '<div style="text-align:center;">'
+                '<img src="{}" width="180" style="border:1px solid #ddd; padding:5px; border-radius:4px;"/>'
+                '<p style="margin-top:5px; color:#666; font-size:11px;">Escanea para ver ficha del equipo</p>'
+                '</div>',
+                equipo.qr_code.url
+            )
+        return format_html('<p style="color:red;">⚠️ El equipo no tiene QR</p>')
+    qr_equipo_preview.short_description = 'QR del Equipo'
+    
+    def firma_preview(self, obj):
+        if obj.firma_imagen:
+            return format_html('<img src="{}" width="300" style="border:1px solid #ccc;"/>', obj.firma_imagen.url)
+        return format_html('<span style="color:gray;">Sin firma digital</span>')
+    firma_preview.short_description = 'Firma Digital'
 
 
 @admin.register(Alerta)
