@@ -72,5 +72,19 @@
       {% endif %}
     </div>
   </div>
+  <!-- Seccion QR -->
+  <div style="margin-top: 30px; border: 1px solid #ccc; padding: 15px; text-align: center; page-break-inside: avoid;">
+    <h4 style="margin-bottom: 10px; color: #333;">📱 Verificacion Digital</h4>
+    {% if equipo.qr_code %}
+      <img src="{{ equipo.qr_code.url }}" width="120" height="120" alt="QR Equipo" style="border: 1px solid #ddd; padding: 5px;"/>
+      <p style="font-size: 10px; color: #666; margin-top: 8px;">
+        Escanea para ver la ficha tecnica completa del equipo<br>
+        <strong>{{ equipo.nombre }}</strong>
+      </p>
+    {% else %}
+      <p style="color: #999; font-size: 11px;">Codigo QR no disponible</p>
+    {% endif %}
+  </div>
+
 </body>
 </html>
