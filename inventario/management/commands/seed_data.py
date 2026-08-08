@@ -1,35 +1,53 @@
-from django.core.management.base import BaseCommand
+import os
+import django
+
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
+django.setup()
+
 from inventario.models import Categoria, Ubicacion
 
-class Command(BaseCommand):
-    help = 'Crea datos iniciales si no existen'
+categorias = [
+    ('Laptop', 'Computadoras portatiles'),
+    ('Desktop', 'Computadoras de escritorio'),
+    ('Monitor', 'Pantallas y monitores'),
+    ('Impresora', 'Impresoras y multifuncionales'),
+    ('Servidor', 'Servidores y estaciones de trabajo'),
+    ('Tablet', 'Tabletas digitales'),
+    ('Celular', 'Telefonos moviles corporativos'),
+    ('Periferico', 'Teclados, mouse, webcams, etc.'),
+    ('Red', 'Routers, switches, access points'),
+    ('Almacenamiento', 'Discos duros, NAS, SSD externos'),
+    ('UPS', 'Reguladores y fuentes de poder'),
+    ('Otro', 'Otros equipos tecnologicos'),
+]
 
-    def handle(self, *args, **kwargs):
-        # Categorías
-        categorias = [
-            'Laptop', 'Desktop', 'Monitor', 'Impresora', 'Servidor',
-            'Red', 'Periferico', 'Almacenamiento', 'UPS', 'General',
-            'Tablet', 'Smartphone', 'Proyector', 'Escáner', 'Videoconferencia',
-        ]
-        for nombre in categorias:
-            Categoria.objects.get_or_create(nombre=nombre)
-        self.stdout.write(self.style.SUCCESS(f'✅ {len(categorias)} categorías listas'))
+for nombre, desc in categorias:
+    obj, created = Categoria.objects.get_or_create(nombre=nombre, defaults={'descripcion': desc})
+    if created:
+        print(f'  + Categoria creada: {nombre}')
+    else:
+        print(f'  = Categoria ya existe: {nombre}')
 
-        # Ubicaciones
-        ubicaciones = [
-            ('Oficina Principal', 'Oficina central de operaciones', 'Admin'),
-            ('Sala de Servidores', 'Servidores y equipos de red', 'Admin Sistemas'),
-            ('Bodega', 'Almacenamiento de equipos y repuestos', 'Almacen'),
-            ('Recepcion', 'Atención al público', 'Recepcionista'),
-            ('Sala de Juntas', 'Reuniones y videoconferencias', 'Coordinador'),
-            ('Area de Desarrollo', 'Estaciones de programación', 'Líder Dev'),
-            ('Area Contable', 'Contabilidad y finanzas', 'Jefe Contable'),
-            ('Sala de Capacitación', 'Capacitaciones y talleres', 'Coordinador de Capacitación'),
-            ('Home Office', 'Trabajo remoto', 'N/A'),
-        ]
-        for nombre, desc, resp in ubicaciones:
-            Ubicacion.objects.get_or_create(
-                nombre=nombre,
-                defaults={'descripcion': desc, 'responsable': resp, 'activa': True}
-            )
-        self.stdout.write(self.style.SUCCESS(f'✅ {len(ubicaciones)} ubicaciones listas'))
+ubicaciones = [
+    ('Oficina Principal', 'Edificio central, piso 1', 'Carlos Mendez'),
+    ('Sala de Servidores', 'Data center principal', 'Luis Torres'),
+    ('Sucursal Norte', 'Zona 18, 12 calle', 'Ana Lopez'),
+    ('Sucursal Sur', 'Villa Nueva, km 15', 'Pedro Ruiz'),
+    ('Bodega', 'Almacenamiento de equipos', 'Maria Castillo'),
+    ('Recepcion', 'Area de entrada principal', 'Jose Martinez'),
+    ('Sala de Juntas A', 'Piso 2, ala este', 'Diana Herrera'),
+    ('Sala de Juntas B', 'Piso 2, ala oeste', 'Roberto Diaz'),
+    ('Area de Desarrollo', 'Piso 3, area de programadores', 'Fernando Paz'),
+    ('Soporte Tecnico', 'Piso 1, area de tecnicos', 'Sandra Morales'),
+    ('Call Center', 'Piso 1, extension norte', 'Miguel Angel'),
+    ('Guardia', 'Puesto de seguridad', 'Seguridad Privada'),
+]
+
+for nombre, desc, resp in ubicaciones:
+    obj, created = Ubicacion.objects.get_or_create(nombre=nombre, defaults={'descripcion': desc, 'responsable': resp, 'activa': True})
+    if created:
+        print(f'  + Ubicacion creada: {nombre}')
+    else:
+        print(f'  = Ubicacion ya existe: {nombre}')
+
+print('\n✅ Datos iniciales creados correctamente.')
