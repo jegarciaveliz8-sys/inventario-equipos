@@ -118,18 +118,17 @@ class Command(BaseCommand):
         # 6. ACCESORIOS (8 con stock critico)
         # ============================================
         accs_data = [
-            ('Hub USB-C', 1, 3, 'Oficina Principal'),
-            ('Teclado externo', 2, 2, 'Oficina Principal'),
-            ('Funda protectora', 3, 5, 'Bodega'),
-            ('Mouse inalambrico', 4, 3, 'Oficina Principal'),
-            ('Cable HDMI', 5, 5, 'Sala de Juntas'),
-            ('Cargador universal', 2, 4, 'Sala de Soporte'),
-            ('Audifonos con microfono', 3, 3, 'Area de Desarrollo'),
-            ('Webcam HD externa', 1, 2, 'Sala de Capacitacion'),
+            ('Hub USB-C', 1, 3, 'Adaptador USB-C multi-puerto'),
+            ('Teclado externo', 2, 2, 'Teclado inalambrico compacto'),
+            ('Funda protectora', 3, 5, 'Funda para tablet 10 pulgadas'),
+            ('Mouse inalambrico', 4, 3, 'Mouse optico inalambrico'),
+            ('Cable HDMI', 5, 5, 'Cable HDMI 2.0 de 2 metros'),
+            ('Cargador universal', 2, 4, 'Cargador USB-C 65W'),
+            ('Audifonos con microfono', 3, 3, 'Audifonos USB para videollamadas'),
+            ('Webcam HD externa', 1, 2, 'Webcam 1080p con microfono integrado'),
         ]
-        for n, s, m, u in accs_data:
-            ub = Ubicacion.objects.filter(nombre=u).first()
-            Accesorio.objects.get_or_create(nombre=n, defaults={'stock_actual': s, 'stock_minimo': m, 'ubicacion': ub})
+        for n, c, m, d in accs_data:
+            Accesorio.objects.get_or_create(nombre=n, defaults={'cantidad': c, 'stock_minimo': m, 'descripcion': d})
         self.stdout.write(self.style.SUCCESS(f'✅ {Accesorio.objects.count()} accesorios'))
 
         # ============================================
@@ -161,7 +160,7 @@ class Command(BaseCommand):
             ('HP002-MX', 'Limpieza de cabezales y calibracion', 'Ejecutar ciclo de limpieza de cabezales, verificar niveles de tinta', 'mensual', hoy + relativedelta(months=1)),
             ('LG001', 'Revision de cables y conectores', 'Verificar integridad de cable HDMI, limpiar puertos y ajustar base', 'semestral', hoy + relativedelta(months=6)),
             ('DELL001', 'Actualizacion de sistema y antivirus', 'Instalar parches de seguridad, actualizar definiciones de virus', 'trimestral', hoy + relativedelta(months=2)),
-            ('SAM001', 'Revisión de pixeles y ajuste de color', 'Verificar pixeles muertos, calibrar perfil de color', 'anual', hoy + relativedelta(months=8)),
+            ('SAM001', 'Revision de pixeles y ajuste de color', 'Verificar pixeles muertos, calibrar perfil de color', 'anual', hoy + relativedelta(months=8)),
         ]
         for serial, titulo, desc, freq, prox in mants_data:
             eq = Equipo.objects.filter(serial=serial).first()
