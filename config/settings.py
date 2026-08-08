@@ -66,12 +66,8 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'config.wsgi.application'
 
-# ============================================
-# DATABASE: PostgreSQL (Supabase/Render) o SQLite (local)
-# ============================================
 DATABASE_URL = os.environ.get('DATABASE_URL')
 if DATABASE_URL:
-    # Producción: PostgreSQL via Supabase
     DATABASES = {
         'default': dj_database_url.config(
             default=DATABASE_URL,
@@ -80,7 +76,6 @@ if DATABASE_URL:
         )
     }
 else:
-    # Desarrollo local: SQLite
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.sqlite3',
