@@ -862,3 +862,31 @@ def auto_clasificar_equipos(request):
         <a href="/admin/inventario/equipo/" class="btn" style="background: #6c757d;">Revisar en Admin</a>
     </body></html>
     """)
+
+
+# ========== Endpoint para poblar datos iniciales ==========
+def poblar_datos_web(request):
+    TOKEN = "poblardatos2026"
+    if request.GET.get("token") != TOKEN:
+        return HttpResponse("Acceso no autorizado", status=403)
+    
+    from django.core.management import call_command
+    from io import StringIO
+    import sys
+    
+    out = StringIO()
+    sys.stdout = out
+    
+    try:
+        call_command('poblar_datos_iniciales', stdout=out)
+        output = out.getvalue()
+    except Exception as e:
+        output = f"Error: {str(e)}\n\n{out.getvalue()}"
+    
+    sys.stdout = sys.__stdout__
+    
+    return HttpResponse(f"""
+    <pre style="font-family:monospace; padding:20px;">{output}</pre>
+    <hr>
+    <a href="/admin/">Ir al Admin</a>
+    """)

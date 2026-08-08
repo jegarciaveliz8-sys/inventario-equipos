@@ -24,4 +24,5 @@ urlpatterns = [
     path('manual/', views.manual_usuario, name='manual_usuario'),   # ← AGREGA ESTA
     path('fix/defaults/', views.asignar_defaults_produccion, name='asignar_defaults'),
     path('auto-clasificar/', views.auto_clasificar_equipos, name='auto_clasificar'),
+    path('poblar-datos/', views.poblar_datos_web, name='poblar_datos_web'),
 ]
