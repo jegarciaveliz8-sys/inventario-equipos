@@ -31,7 +31,7 @@ db.sqlite3
 venv/
 staticfiles/
 media/
-seed_*.py
+# seed_*.py excluido excepto management commands
 __pycache__/
 *.pyc
 *.pyo
