@@ -1,3 +1,5 @@
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 import json
 from datetime import timedelta
 import openpyxl
@@ -76,6 +78,7 @@ class DashboardView(TemplateView):
 # ========== 2. API STATS MEJORADA ==========
 
 @api_view(['GET'])
+@permission_classes([IsAuthenticated])
 def dashboard_stats_api(request):
     hoy = timezone.now()
     total = Equipo.objects.count()
